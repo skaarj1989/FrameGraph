@@ -38,7 +38,7 @@ inline FrameGraphResource FrameGraph::import(const std::string_view name,
                                              T &&resource) {
   const auto resourceId = static_cast<uint32_t>(m_resourceRegistry.size());
   m_resourceRegistry.emplace_back(
-    ResourceEntry{resourceId, std::forward<T::Desc>(desc),
+    ResourceEntry{resourceId, std::forward<typename T::Desc>(desc),
                   std::forward<T>(resource), kResourceInitialVersion, true});
   return _createResourceNode(name, resourceId).m_id;
 }
@@ -48,7 +48,7 @@ inline FrameGraphResource FrameGraph::_create(const std::string_view name,
                                               typename T::Desc &&desc) {
   const auto resourceId = static_cast<uint32_t>(m_resourceRegistry.size());
   m_resourceRegistry.emplace_back(ResourceEntry{
-    resourceId, std::forward<T::Desc>(desc), T{}, kResourceInitialVersion});
+    resourceId, std::forward<typename T::Desc>(desc), T{}, kResourceInitialVersion});
   return _createResourceNode(name, resourceId).m_id;
 }
 

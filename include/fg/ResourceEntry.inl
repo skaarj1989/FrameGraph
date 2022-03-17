@@ -16,7 +16,7 @@ template <typename T>
 inline ResourceEntry::ResourceEntry(uint32_t id, typename T::Desc &&desc,
                                     T &&obj, uint32_t version, bool imported)
     : m_id{id}, m_concept{std::make_unique<Model<T>>(
-                  std::forward<T::Desc>(desc), std::forward<T>(obj))},
+                  std::forward<typename T::Desc>(desc), std::forward<T>(obj))},
       m_version{version}, m_imported{imported} {}
 
 template <typename T> inline auto *ResourceEntry::_getModel() const {
