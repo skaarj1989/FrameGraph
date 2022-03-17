@@ -44,6 +44,7 @@ add_library(
   "include/fg/ResourceEntry.inl"
   "include/fg/Blackboard.hpp"
   "include/fg/Blackboard.inl"
+  "include/fg/Fwd.hpp"
   "src/FrameGraph.cpp"
   "src/GraphNode.cpp"
   "src/PassNode.cpp"
@@ -51,9 +52,8 @@ add_library(
   "src/ResourceEntry.cpp")
 
 target_include_directories(
-  FrameGraph
-  PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+  FrameGraph PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+                    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
 add_library(fg::FrameGraph ALIAS FrameGraph)
 
