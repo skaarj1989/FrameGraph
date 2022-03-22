@@ -10,9 +10,9 @@ class PassNode final : public GraphNode {
   friend class FrameGraph;
 
 public:
-  [[nodiscard]] bool creates(FrameGraphResource id);
-  [[nodiscard]] bool reads(FrameGraphResource id);
-  [[nodiscard]] bool writes(FrameGraphResource id);
+  [[nodiscard]] bool creates(FrameGraphResource id) const;
+  [[nodiscard]] bool reads(FrameGraphResource id) const;
+  [[nodiscard]] bool writes(FrameGraphResource id) const;
 
   [[nodiscard]] bool hasSideEffect() const;
   [[nodiscard]] bool canExecute() const;

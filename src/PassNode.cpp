@@ -5,14 +5,22 @@ namespace {
 
 [[nodiscard]] bool hasId(const std::vector<FrameGraphResource> &v,
                          FrameGraphResource id) {
+#if __cpp_lib_ranges
+  return std::ranges::find(v, id) != v.cend();
+#else
   return std::find(v.cbegin(), v.cend(), id) != v.cend();
+#endif
 }
 
 } // namespace
 
-bool PassNode::creates(FrameGraphResource id) { return hasId(m_creates, id); }
-bool PassNode::reads(FrameGraphResource id) { return hasId(m_reads, id); }
-bool PassNode::writes(FrameGraphResource id) { return hasId(m_writes, id); }
+bool PassNode::creates(FrameGraphResource id) const {
+  return hasId(m_creates, id);
+}
+bool PassNode::reads(FrameGraphResource id) const { return hasId(m_reads, id); }
+bool PassNode::writes(FrameGraphResource id) const {
+  return hasId(m_writes, id);
+}
 
 bool PassNode::hasSideEffect() const { return m_hasSideEffect; }
 

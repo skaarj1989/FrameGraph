@@ -19,7 +19,7 @@ struct FrameGraphPass final : FrameGraphPassConcept {
   explicit FrameGraphPass(Execute &&exec)
       : execFunction{std::forward<Execute>(exec)} {}
 
-  void operator()(FrameGraphPassResources &resources, void *context) {
+  void operator()(FrameGraphPassResources &resources, void *context) override {
     execFunction(data, resources, context);
   }
 
