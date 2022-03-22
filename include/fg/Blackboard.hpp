@@ -16,6 +16,9 @@ public:
 
   template <typename T, typename... Args> T &add(Args &&...args);
 
+  template <typename T> [[nodiscard]] const T &get() const;
+  template <typename T> [[nodiscard]] const T *try_get() const;
+
   template <typename T> [[nodiscard]] T &get();
   template <typename T> [[nodiscard]] T *try_get();
 
