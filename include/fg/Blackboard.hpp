@@ -7,11 +7,11 @@
 class FrameGraphBlackboard {
 public:
   FrameGraphBlackboard() = default;
-  FrameGraphBlackboard(const FrameGraphBlackboard &) = delete;
+  FrameGraphBlackboard(const FrameGraphBlackboard &) = default;
   FrameGraphBlackboard(FrameGraphBlackboard &&) noexcept = default;
   ~FrameGraphBlackboard() = default;
 
-  FrameGraphBlackboard &operator=(const FrameGraphBlackboard &) = delete;
+  FrameGraphBlackboard &operator=(const FrameGraphBlackboard &) = default;
   FrameGraphBlackboard &operator=(FrameGraphBlackboard &&) noexcept = default;
 
   template <typename T, typename... Args> T &add(Args &&...args);
