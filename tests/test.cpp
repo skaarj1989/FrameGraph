@@ -1,7 +1,7 @@
-#define CATCH_CONFIG_MAIN
 #include "fg/FrameGraph.hpp"
 #include "fg/Blackboard.hpp"
-#include "catch2/catch.hpp"
+#include "catch.hpp"
+#include <fstream>
 
 struct BadResource {
   struct Desc {};
@@ -265,6 +265,9 @@ TEST_CASE("Blackboard", "[Blackboard]") {
   };
   bb.add<FooData>() = {1, 2, 3};
   REQUIRE(bb.has<FooData>());
+  REQUIRE(bb.try_get<FooData>());
+
+  auto *foo = bb.try_get<FooData>();
 
   struct BarData {
     int32_t i, j, k;
@@ -272,11 +275,16 @@ TEST_CASE("Blackboard", "[Blackboard]") {
   bb.add<BarData>(9, 8, 7);
   REQUIRE(bb.has<BarData>());
 
-  CHECK(bb.get<FooData>().x == 1);
-  CHECK(bb.get<FooData>().y == 2);
-  CHECK(bb.get<FooData>().z == 3);
-
   CHECK(bb.get<BarData>().i == 9);
   CHECK(bb.get<BarData>().j == 8);
   CHECK(bb.get<BarData>().k == 7);
+
+  CHECK(foo->x == 1);
+  CHECK(foo->y == 2);
+  CHECK(foo->z == 3);
+
+  foo->x = 100;
+  CHECK(bb.get<FooData>().x == 100);
 }
+
+int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }

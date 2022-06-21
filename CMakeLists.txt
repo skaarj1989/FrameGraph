@@ -2,16 +2,18 @@ cmake_minimum_required(VERSION 3.20)
 
 if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
   set(CMAKE_TOOLCHAIN_FILE
-      "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
-      CACHE STRING "")
+    "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+    CACHE STRING "")
 endif()
+
 message(STATUS "TOOLCHAIN: ${CMAKE_TOOLCHAIN_FILE}")
 
 project(FrameGraph)
+
 if(PROJECT_BINARY_DIR STREQUAL PROJECT_SOURCE_DIR)
   message(
     FATAL_ERROR
-      "In-source builds not allowed. Please make a new directory (called a build directory) and run CMake from there."
+    "In-source builds not allowed. Please make a new directory (called a build directory) and run CMake from there."
   )
 endif()
 
@@ -25,10 +27,9 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib") # .lib
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib") # .dll
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin") # .exe
-
-  option(BUILD_SHARED_LIBS "Use shared libraries" OFF)
-  set(BUILD_TESTING ON)
 endif()
+
+option(FG_BUILD_TEST ON)
 
 add_library(
   FrameGraph
@@ -57,11 +58,13 @@ target_include_directories(
 
 add_library(fg::FrameGraph ALIAS FrameGraph)
 
-if(BUILD_TESTING)
+if(FG_BUILD_TEST)
   enable_testing()
   add_subdirectory(tests)
 endif()
 
 include(GNUInstallDirs)
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/fg
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(
+  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/fg
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
