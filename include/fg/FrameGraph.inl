@@ -19,12 +19,6 @@ inline const Data &FrameGraph::addCallbackPass(const std::string_view name,
   std::invoke(setup, builder, pass->data);
   return pass->data;
 }
-template <typename Setup, typename Execute>
-inline void FrameGraph::addCallbackPass(const std::string_view name,
-                                        Setup &&setup, Execute &&exec) {
-  struct NoData {};
-  addCallbackPass<NoData>(name, setup, std::forward<Execute>(exec));
-}
 
 _VIRTUALIZABLE_CONCEPT_IMPL
 inline typename const T::Desc &
@@ -47,8 +41,9 @@ _VIRTUALIZABLE_CONCEPT_IMPL
 inline FrameGraphResource FrameGraph::_create(const std::string_view name,
                                               typename T::Desc &&desc) {
   const auto resourceId = static_cast<uint32_t>(m_resourceRegistry.size());
-  m_resourceRegistry.emplace_back(ResourceEntry{
-    resourceId, std::forward<typename T::Desc>(desc), T{}, kResourceInitialVersion});
+  m_resourceRegistry.emplace_back(
+    ResourceEntry{resourceId, std::forward<typename T::Desc>(desc), T{},
+                  kResourceInitialVersion});
   return _createResourceNode(name, resourceId).m_id;
 }
 

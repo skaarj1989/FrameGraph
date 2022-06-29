@@ -57,11 +57,9 @@ public:
    * @param exec Execution of this lambda is deferred until execute() phase
    * (must capture by value due to this).
    */
-  template <typename Data, typename Setup, typename Execute>
+  template <typename Data = std::monostate, typename Setup, typename Execute>
   const Data &addCallbackPass(const std::string_view name, Setup &&setup,
                               Execute &&exec);
-  template <typename Setup, typename Execute>
-  void addCallbackPass(const std::string_view name, Setup &&, Execute &&);
 
   _VIRTUALIZABLE_CONCEPT
   [[nodiscard]] typename const T::Desc &getDescriptor(FrameGraphResource id);

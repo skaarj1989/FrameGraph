@@ -49,6 +49,12 @@ static_assert(
 // Runtime tests:
 //
 
+TEST_CASE("Pass without data", "[FrameGraph]") {
+  FrameGraph fg;
+  fg.addCallbackPass(
+    "Dummy", [&](FrameGraph::Builder &builder, auto &) {},
+    [=](const auto &, FrameGraphPassResources &resources, void *) {});
+}
 TEST_CASE("Basic graph with side-effect", "[FrameGraph]") {
   FrameGraph fg;
 
