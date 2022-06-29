@@ -44,11 +44,11 @@ bool FrameGraph::isValid(FrameGraphResource id) const {
 void FrameGraph::compile() {
   for (auto &pass : m_passNodes) {
     pass.m_refCount = pass.m_writes.size();
-    for (auto id : pass.m_reads) {
+    for (auto &[id, _] : pass.m_reads) {
       auto &consumed = m_resourceNodes[id];
       consumed.m_refCount++;
     }
-    for (auto id : pass.m_writes) {
+    for (auto &[id, _] : pass.m_writes) {
       auto &written = m_resourceNodes[id];
       written.m_producer = &pass;
     }
@@ -68,7 +68,7 @@ void FrameGraph::compile() {
 
     assert(producer->m_refCount >= 1);
     if (--producer->m_refCount == 0) {
-      for (auto id : producer->m_reads) {
+      for (auto &[id, _] : producer->m_reads) {
         auto &node = m_resourceNodes[id];
         if (--node.m_refCount == 0) unreferencedResources.push(&node);
       }
@@ -82,9 +82,9 @@ void FrameGraph::compile() {
 
     for (auto id : pass.m_creates)
       _getResourceEntry(id).m_producer = &pass;
-    for (auto id : pass.m_writes)
+    for (auto &[id, _] : pass.m_writes)
       _getResourceEntry(id).m_last = &pass;
-    for (auto id : pass.m_reads)
+    for (auto &[id, _] : pass.m_reads)
       _getResourceEntry(id).m_last = &pass;
   }
 }
@@ -95,6 +95,12 @@ void FrameGraph::execute(void *context, void *allocator) {
     for (auto id : pass.m_creates)
       _getResourceEntry(id).create(allocator);
 
+    for (auto &&[id, flags] : pass.m_reads) {
+      if (flags != 0) _getResourceEntry(id).preRead(flags, context);
+    }
+    for (auto &&[id, flags] : pass.m_writes) {
+      if (flags != 0) _getResourceEntry(id).preWrite(flags, context);
+    }
     FrameGraphPassResources resources{*this, pass};
     std::invoke(*pass.m_exec, resources, context);
 
@@ -155,7 +161,7 @@ void FrameGraph::exportGraphviz(std::ostream &os) const {
 
   for (const PassNode &node : m_passNodes) {
     os << "P" << node.m_id << " -> { ";
-    for (auto id : node.m_writes) {
+    for (auto &[id, _] : node.m_writes) {
       const auto &written = m_resourceNodes[id];
       os << "R" << written.m_resourceId << "_" << written.m_version << " ";
     }
@@ -169,7 +175,7 @@ void FrameGraph::exportGraphviz(std::ostream &os) const {
     os << "R" << node.m_resourceId << "_" << node.m_version << " -> { ";
     // find all readers of this resource node
     for (const PassNode &pass : m_passNodes) {
-      for (const auto id : pass.m_reads)
+      for (const auto &[id, _] : pass.m_reads)
         if (id == node.m_id) os << "P" << pass.m_id << " ";
     }
     os << "} [color=" << style.color.edge.read << "]" << std::endl;
@@ -253,24 +259,26 @@ std::ostream &operator<<(std::ostream &os, const FrameGraph &fg) {
 // FrameGraph::Builder class:
 //
 
-FrameGraphResource FrameGraph::Builder::read(FrameGraphResource id) {
+FrameGraphResource FrameGraph::Builder::read(FrameGraphResource id,
+                                             uint32_t flags) {
   assert(m_frameGraph.isValid(id));
-  return m_passNode._read(id);
+  return m_passNode._read(id, flags);
 }
-FrameGraphResource FrameGraph::Builder::write(FrameGraphResource id) {
+FrameGraphResource FrameGraph::Builder::write(FrameGraphResource id,
+                                              uint32_t flags) {
   assert(m_frameGraph.isValid(id));
   if (m_frameGraph._getResourceEntry(id).isImported()) setSideEffect();
 
   if (m_passNode.creates(id)) {
-    return m_passNode._write(id);
+    return m_passNode._write(id, flags);
   } else {
     // Writing to a texture produces a renamed handle.
     // This allows us to catch errors when resources are modified in
     // undefined order (when same resource is written by different passes).
     // Renaming resources enforces a specific execution order of the render
     // passes.
-    m_passNode._read(id);
-    return m_passNode._write(m_frameGraph._clone(id));
+    m_passNode._read(id, 0);
+    return m_passNode._write(m_frameGraph._clone(id), flags);
   }
 }
 

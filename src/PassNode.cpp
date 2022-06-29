@@ -11,6 +11,11 @@ namespace {
   return std::find(v.cbegin(), v.cend(), id) != v.cend();
 #endif
 }
+[[nodiscard]] bool hasId(const std::vector<PassNode::AccessDeclaration> &v,
+                         FrameGraphResource id) {
+  return std::find_if(v.cbegin(), v.cend(),
+                      [id](const auto &e) { return e.id == id; }) != v.cend();
+}
 
 } // namespace
 
@@ -30,10 +35,11 @@ PassNode::PassNode(const std::string_view name, uint32_t id,
                    std::unique_ptr<FrameGraphPassConcept> &&exec)
     : GraphNode{name, id}, m_exec{std::move(exec)} {}
 
-FrameGraphResource PassNode::_read(FrameGraphResource id) {
+FrameGraphResource PassNode::_read(FrameGraphResource id, uint32_t flags) {
   assert(!creates(id) && !writes(id));
-  return reads(id) ? id : m_reads.emplace_back(id);
+  return reads(id) ? id : m_reads.emplace_back(AccessDeclaration{id, flags}).id;
 }
-FrameGraphResource PassNode::_write(FrameGraphResource id) {
-  return writes(id) ? id : m_writes.emplace_back(id);
+FrameGraphResource PassNode::_write(FrameGraphResource id, uint32_t flags) {
+  return writes(id) ? id
+                    : m_writes.emplace_back(AccessDeclaration{id, flags}).id;
 }

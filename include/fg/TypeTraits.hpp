@@ -21,6 +21,15 @@ concept Virtualizable = requires(T t) {
 #  define _VIRTUALIZABLE_CONCEPT_IMPL _VIRTUALIZABLE_CONCEPT
 
 template <typename T>
+concept has_preRead = requires(T t) {
+  { t.preRead(0u, (void *)nullptr) } -> std::same_as<void>;
+};
+template <typename T>
+concept has_preWrite = requires(T t) {
+  { t.preWrite(0u, (void *)nullptr) } -> std::same_as<void>;
+};
+
+template <typename T>
 concept has_toString = requires() {
   { T::toString(typename T::Desc{}) } -> std::convertible_to<std::string_view>;
 };
@@ -76,6 +85,31 @@ template <typename T> constexpr bool is_resource() {
     template <typename T, std::enable_if_t<is_resource<T>(), bool> = true>
 #  define _VIRTUALIZABLE_CONCEPT_IMPL                                          \
     template <typename T, std::enable_if_t<is_resource<T>(), bool>>
+
+template <typename T> struct has_preRead {
+  template <typename U> static constexpr std::false_type test(...) {
+    return {};
+  }
+  template <typename U>
+  static constexpr auto test(U *u) -> typename std::is_same<
+    void, decltype(u->preRead(0u, std::declval<void *>()))>::type {
+    return {};
+  }
+
+  static constexpr bool value{test<T>(nullptr)};
+};
+template <typename T> struct has_preWrite {
+  template <typename U> static constexpr std::false_type test(...) {
+    return {};
+  }
+  template <typename U>
+  static constexpr auto test(U *u) -> typename std::is_same<
+    void, decltype(u->preWrite(0u, std::declval<void *>()))>::type {
+    return {};
+  }
+
+  static constexpr bool value{test<T>(nullptr)};
+};
 
 template <typename T, typename = void> struct has_toString : std::false_type {};
 template <class T>

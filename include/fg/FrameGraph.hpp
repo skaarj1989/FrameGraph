@@ -33,12 +33,13 @@ public:
     [[nodiscard]] FrameGraphResource create(const std::string_view name,
                                             typename T::Desc &&);
     /** Declares read operation. */
-    FrameGraphResource read(FrameGraphResource id);
+    FrameGraphResource read(FrameGraphResource id, uint32_t flags = 0);
     /**
      * Declares write operation.
      * @remark Writing to imported resource counts as side-effect.
      */
-    [[nodiscard]] FrameGraphResource write(FrameGraphResource id);
+    [[nodiscard]] FrameGraphResource write(FrameGraphResource id,
+                                           uint32_t flags = 0);
 
     /** Ensures that this pass is not culled during the compilation phase. */
     Builder &setSideEffect();

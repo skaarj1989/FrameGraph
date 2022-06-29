@@ -22,6 +22,13 @@ public:
   void create(void *allocator);
   void destroy(void *allocator);
 
+  void preRead(uint32_t flags, void *context) {
+    m_concept->preRead(flags, context);
+  }
+  void preWrite(uint32_t flags, void *context) {
+    m_concept->preWrite(flags, context);
+  }
+
   [[nodiscard]] uint32_t getVersion() const;
   [[nodiscard]] bool isImported() const;
   [[nodiscard]] bool isTransient() const;
@@ -41,6 +48,9 @@ private:
     virtual void create(void *) = 0;
     virtual void destroy(void *) = 0;
 
+    virtual void preRead(uint32_t flags, void *) = 0;
+    virtual void preWrite(uint32_t flags, void *) = 0;
+
     virtual std::string toString() const = 0;
   };
   template <typename T> struct Model : Concept {
@@ -48,6 +58,23 @@ private:
 
     void create(void *allocator) final;
     void destroy(void *allocator) final;
+
+    void preRead(uint32_t flags, void *context) override {
+#if _HAS_CXX20
+      if constexpr (has_preRead<T>)
+#else
+      if constexpr (has_preRead<T>::value)
+#endif
+        resource.preRead(flags, context);
+    }
+    void preWrite(uint32_t flags, void *context) override {
+#if _HAS_CXX20
+      if constexpr (has_preWrite<T>)
+#else
+      if constexpr (has_preWrite<T>::value)
+#endif
+        resource.preWrite(flags, context);
+    }
 
     std::string toString() const final;
 

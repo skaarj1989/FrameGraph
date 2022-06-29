@@ -32,18 +32,23 @@ struct FrameGraphTexture {
   }
   void destroy(const Desc &, void *) {}
 
+  void preRead(uint32_t flags, void *) {}
+  void preWrite() {}
+
   static const char *toString(const Desc &desc) { return "<I>texture</I>"; }
 
   int32_t id{-1};
 };
 
-static_assert(
 #if _HAS_CXX20
-  Virtualizable<FrameGraphTexture>
+static_assert(Virtualizable<FrameGraphTexture>);
+static_assert(has_preRead<FrameGraphTexture>);
+static_assert(!has_preWrite<FrameGraphTexture>);
 #else
-  is_resource<FrameGraphTexture>()
+static_assert(is_resource<FrameGraphTexture>());
+static_assert(has_preRead<FrameGraphTexture>::value);
+static_assert(!has_preWrite<FrameGraphTexture>::value);
 #endif
-);
 
 //
 // Runtime tests:

@@ -10,6 +10,11 @@ class PassNode final : public GraphNode {
   friend class FrameGraph;
 
 public:
+  struct AccessDeclaration {
+    FrameGraphResource id;
+    uint32_t flags;
+  };
+
   [[nodiscard]] bool creates(FrameGraphResource id) const;
   [[nodiscard]] bool reads(FrameGraphResource id) const;
   [[nodiscard]] bool writes(FrameGraphResource id) const;
@@ -21,15 +26,17 @@ private:
   PassNode(const std::string_view name, uint32_t id,
            std::unique_ptr<FrameGraphPassConcept> &&);
 
-  FrameGraphResource _read(FrameGraphResource id);
-  [[nodiscard]] FrameGraphResource _write(FrameGraphResource id);
+  FrameGraphResource _read(FrameGraphResource id, uint32_t flags);
+  [[nodiscard]] FrameGraphResource _write(FrameGraphResource id,
+                                          uint32_t flags);
 
 private:
   std::unique_ptr<FrameGraphPassConcept> m_exec;
 
   std::vector<FrameGraphResource> m_creates;
-  std::vector<FrameGraphResource> m_reads;
-  std::vector<FrameGraphResource> m_writes;
+
+  std::vector<AccessDeclaration> m_reads;
+  std::vector<AccessDeclaration> m_writes;
 
   bool m_hasSideEffect{false};
 };
