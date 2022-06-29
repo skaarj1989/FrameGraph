@@ -29,7 +29,7 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin") # .exe
 endif()
 
-option(FG_BUILD_TEST ON)
+option(FG_BUILD_TEST "Build unit tests" ON)
 
 add_library(
   FrameGraph
