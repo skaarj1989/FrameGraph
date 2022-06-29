@@ -9,7 +9,7 @@
 
 template <typename T>
 concept Virtualizable = requires(T t) {
-  requires std::is_default_constructible_v<T> and
+  requires std::is_default_constructible_v<T> &&
     std::is_move_constructible_v<T>;
 
   typename T::Desc;
