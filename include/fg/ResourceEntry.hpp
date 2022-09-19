@@ -65,7 +65,7 @@ private:
 #else
       if constexpr (has_preRead<T>::value)
 #endif
-        resource.preRead(flags, context);
+        resource.preRead(descriptor, flags, context);
     }
     void preWrite(uint32_t flags, void *context) override {
 #if _HAS_CXX20
@@ -73,7 +73,7 @@ private:
 #else
       if constexpr (has_preWrite<T>::value)
 #endif
-        resource.preWrite(flags, context);
+        resource.preWrite(descriptor, flags, context);
     }
 
     std::string toString() const final;

@@ -22,11 +22,11 @@ concept Virtualizable = requires(T t) {
 
 template <typename T>
 concept has_preRead = requires(T t) {
-  { t.preRead(0u, (void *)nullptr) } -> std::same_as<void>;
+  { t.preRead(typename T::Desc{}, 0u, (void *)nullptr) } -> std::same_as<void>;
 };
 template <typename T>
 concept has_preWrite = requires(T t) {
-  { t.preWrite(0u, (void *)nullptr) } -> std::same_as<void>;
+  { t.preWrite(typename T::Desc{}, 0u, (void *)nullptr) } -> std::same_as<void>;
 };
 
 template <typename T>
@@ -91,8 +91,10 @@ template <typename T> struct has_preRead {
     return {};
   }
   template <typename U>
-  static constexpr auto test(U *u) -> typename std::is_same<
-    void, decltype(u->preRead(0u, std::declval<void *>()))>::type {
+  static constexpr auto test(U *u) ->
+    typename std::is_same<void,
+                          decltype(u->preRead(typename T::Desc{}, 0u,
+                                              std::declval<void *>()))>::type {
     return {};
   }
 
@@ -103,8 +105,10 @@ template <typename T> struct has_preWrite {
     return {};
   }
   template <typename U>
-  static constexpr auto test(U *u) -> typename std::is_same<
-    void, decltype(u->preWrite(0u, std::declval<void *>()))>::type {
+  static constexpr auto test(U *u) ->
+    typename std::is_same<void,
+                          decltype(u->preWrite(typename T::Desc{}, 0u,
+                                               std::declval<void *>()))>::type {
     return {};
   }
 
