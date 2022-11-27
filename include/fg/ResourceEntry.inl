@@ -8,7 +8,7 @@ template <typename T> inline T &ResourceEntry::get() {
   return _getModel<T>()->resource;
 }
 template <typename T>
-inline typename const T::Desc &ResourceEntry::getDescriptor() const {
+inline const typename T::Desc &ResourceEntry::getDescriptor() const {
   return _getModel<T>()->descriptor;
 }
 

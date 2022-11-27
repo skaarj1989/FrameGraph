@@ -21,7 +21,7 @@ inline const Data &FrameGraph::addCallbackPass(const std::string_view name,
 }
 
 _VIRTUALIZABLE_CONCEPT_IMPL
-inline typename const T::Desc &
+inline const typename T::Desc &
 FrameGraph::getDescriptor(FrameGraphResource id) {
   return _getResourceEntry(id)._getModel<T>()->descriptor;
 }
@@ -71,7 +71,7 @@ inline T &FrameGraphPassResources::get(FrameGraphResource id) {
 }
 
 _VIRTUALIZABLE_CONCEPT_IMPL
-inline typename const T::Desc &
+inline const typename T::Desc &
 FrameGraphPassResources::getDescriptor(FrameGraphResource id) const {
   assert(m_passNode.reads(id) || m_passNode.creates(id) ||
          m_passNode.writes(id));

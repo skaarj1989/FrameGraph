@@ -32,7 +32,7 @@ struct FrameGraphTexture {
   }
   void destroy(const Desc &, void *) {}
 
-  void preRead(uint32_t flags, void *) {}
+  void preRead(const Desc &, uint32_t flags, void *) {}
   void preWrite() {}
 
   static const char *toString(const Desc &desc) { return "<I>texture</I>"; }
