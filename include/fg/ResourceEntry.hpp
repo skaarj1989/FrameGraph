@@ -1,6 +1,7 @@
 #pragma once
 
 #include "fg/PassNode.hpp"
+#include "fg/TypeTraits.hpp"
 
 // http://www.cplusplus.com/articles/oz18T05o/
 // https://www.modernescpp.com/index.php/c-core-guidelines-type-erasure-with-templates
@@ -35,7 +36,7 @@ public:
 
   template <typename T> [[nodiscard]] T &get();
   template <typename T>
-  [[nodiscard]] typename const T::Desc &getDescriptor() const;
+  [[nodiscard]] const typename T::Desc &getDescriptor() const;
 
 private:
   template <typename T>
@@ -78,7 +79,7 @@ private:
 
     std::string toString() const final;
 
-    typename const T::Desc descriptor;
+    const typename T::Desc descriptor;
     T resource;
   };
 
