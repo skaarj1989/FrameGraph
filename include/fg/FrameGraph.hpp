@@ -63,7 +63,7 @@ public:
                               Execute &&exec);
 
   _VIRTUALIZABLE_CONCEPT
-  [[nodiscard]] typename const T::Desc &getDescriptor(FrameGraphResource id);
+  [[nodiscard]] const typename T::Desc &getDescriptor(FrameGraphResource id);
 
   _VIRTUALIZABLE_CONCEPT
   /** Imports the given resource T into FrameGraph. */
@@ -121,7 +121,7 @@ public:
   _VIRTUALIZABLE_CONCEPT
   [[nodiscard]] T &get(FrameGraphResource id);
   _VIRTUALIZABLE_CONCEPT
-  [[nodiscard]] typename const T::Desc &
+  [[nodiscard]] const typename T::Desc &
   getDescriptor(FrameGraphResource id) const;
 
 private:
