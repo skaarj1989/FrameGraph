@@ -102,10 +102,11 @@ void FrameGraph::execute(void *context, void *allocator) {
       _getResourceEntry(id).create(allocator);
 
     for (auto &&[id, flags] : pass.m_reads) {
-      if (flags != 0) _getResourceEntry(id).preRead(flags, context);
+      if (flags != kFlagsIgnored) _getResourceEntry(id).preRead(flags, context);
     }
     for (auto &&[id, flags] : pass.m_writes) {
-      if (flags != 0) _getResourceEntry(id).preWrite(flags, context);
+      if (flags != kFlagsIgnored)
+        _getResourceEntry(id).preWrite(flags, context);
     }
     FrameGraphPassResources resources{*this, pass};
     std::invoke(*pass.m_exec, resources, context);
@@ -283,7 +284,7 @@ FrameGraphResource FrameGraph::Builder::write(FrameGraphResource id,
     // undefined order (when same resource is written by different passes).
     // Renaming resources enforces a specific execution order of the render
     // passes.
-    m_passNode._read(id, 0);
+    m_passNode._read(id, kFlagsIgnored);
     return m_passNode._write(m_frameGraph._clone(id), flags);
   }
 }

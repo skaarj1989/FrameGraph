@@ -4,6 +4,8 @@
 #include "fg/ResourceNode.hpp"
 #include "fg/ResourceEntry.hpp"
 
+constexpr auto kFlagsIgnored = ~0;
+
 class FrameGraph {
   friend class FrameGraphPassResources;
 
@@ -33,13 +35,14 @@ public:
     [[nodiscard]] FrameGraphResource create(const std::string_view name,
                                             typename T::Desc);
     /** Declares read operation. */
-    FrameGraphResource read(FrameGraphResource id, uint32_t flags = 0);
+    FrameGraphResource read(FrameGraphResource id,
+                            uint32_t flags = kFlagsIgnored);
     /**
      * Declares write operation.
      * @remark Writing to imported resource counts as side-effect.
      */
     [[nodiscard]] FrameGraphResource write(FrameGraphResource id,
-                                           uint32_t flags = 0);
+                                           uint32_t flags = kFlagsIgnored);
 
     /** Ensures that this pass is not culled during the compilation phase. */
     Builder &setSideEffect();
