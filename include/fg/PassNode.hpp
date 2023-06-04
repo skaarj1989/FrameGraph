@@ -13,6 +13,8 @@ public:
   struct AccessDeclaration {
     FrameGraphResource id;
     uint32_t flags;
+
+    bool operator==(const AccessDeclaration &) const = default;
   };
 
   [[nodiscard]] bool creates(FrameGraphResource id) const;
