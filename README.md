@@ -134,13 +134,15 @@ _(Graph created by one of tests)_
 To integrate a resource with **FrameGraph**, the following requirements should be met.
 **T** is a type meeting the requirements of **FrameGraph** resource.
 
-| Expression                        | Type                                                 | Description                                                                           |
-| --------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| <pre lang="cpp">T{}</pre>         | <pre lang="cpp">T</pre>                              | Is default/move constructible.                                                        |
-| <pre lang="cpp">T::Desc</pre>     | <pre lang="cpp">struct</pre>                         | Resource descriptor.                                                                  |
-| <pre lang="cpp">T::create</pre>   | <pre lang="cpp">void(const T::Desc &, void \*)</pre> | A function used by implementation to create transient resource.                       |
-| <pre lang="cpp">T::destroy</pre>  | <pre lang="cpp">void(const T::Desc &, void \*)</pre> | A function used by implementation to destroy transient resource.                      |
-| <pre lang="cpp">T::toString</pre> | <pre lang="cpp">std::string(const T::Desc &)<pre>    | _(optional)_<br/>Static function used to embed resource descriptor inside graph node. |
+| Expression                        | Type                                                                        | Description                                                                           |
+| --------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| <pre lang="cpp">T{}</pre>         | <pre lang="cpp">T</pre>                                                     | Is default/move constructible.                                                        |
+| <pre lang="cpp">T::Desc</pre>     | <pre lang="cpp">struct</pre>                                                | Resource descriptor.                                                                  |
+| <pre lang="cpp">T::create</pre>   | <pre lang="cpp">void(const T::Desc &, void \*)</pre>                        | A function used by implementation to create transient resource.                       |
+| <pre lang="cpp">T::destroy</pre>  | <pre lang="cpp">void(const T::Desc &, void \*)</pre>                        | A function used by implementation to destroy transient resource.                      |
+| <pre lang="cpp">T::preRead</pre>  | <pre lang="cpp">void(const T::Desc &, uint32_t flags, void \*context)</pre> | _(optional)_<br/>A function called before an execution lambda of a pass.              |
+| <pre lang="cpp">T::preWrite</pre> | <pre lang="cpp">void(const T::Desc &, uint32_t flags, void \*context)</pre> | _(optional)_<br/>A function called before an execution lambda of a pass.              |
+| <pre lang="cpp">T::toString</pre> | <pre lang="cpp">std::string(const T::Desc &)<pre>                           | _(optional)_<br/>Static function used to embed resource descriptor inside graph node. |
 
 ## Installation
 
