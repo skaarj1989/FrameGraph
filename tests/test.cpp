@@ -19,7 +19,8 @@ static_assert(
 
 struct FrameGraphTexture {
   struct Desc {
-    uint32_t width, height;
+    uint32_t width;
+    uint32_t height;
   };
 
   FrameGraphTexture() = default;
@@ -183,11 +184,11 @@ TEST_CASE("Culled pass", "[FrameGraph]") {
   REQUIRE_FALSE(testPass.executed);
 }
 TEST_CASE("Deferred pipeline", "[FrameGraph]") {
-  const auto kWidth = 1280u, kHeight = 720u;
-
   FrameGraph fg;
   auto backbufferId =
-    fg.import("Backbuffer", {kWidth, kHeight}, FrameGraphTexture{117});
+    fg.import("Backbuffer", {1280, 720}, FrameGraphTexture{117});
+
+  const auto &desc = fg.getDescriptor<FrameGraphTexture>(backbufferId);
 
   struct DepthPass {
     FrameGraphResource depth;
@@ -196,8 +197,7 @@ TEST_CASE("Deferred pipeline", "[FrameGraph]") {
   auto &depthPass = fg.addCallbackPass<DepthPass>(
     "Depth pass",
     [&](FrameGraph::Builder &builder, DepthPass &data) {
-      data.depth =
-        builder.create<FrameGraphTexture>("DepthBuffer", {kWidth, kHeight});
+      data.depth = builder.create<FrameGraphTexture>("DepthBuffer", desc);
       data.depth = builder.write(data.depth);
     },
     [=](const DepthPass &data, FrameGraphPassResources &, void *) {
@@ -216,14 +216,12 @@ TEST_CASE("Deferred pipeline", "[FrameGraph]") {
     "GBuffer pass",
     [&](FrameGraph::Builder &builder, GBufferPass &data) {
       data.depth = builder.read(depthPass.depth);
-      data.position = builder.create<FrameGraphTexture>("GBuffer/ Position",
-                                                        {kWidth, kHeight});
+      data.position =
+        builder.create<FrameGraphTexture>("GBuffer/ Position", desc);
       data.position = builder.write(data.position);
-      data.normal =
-        builder.create<FrameGraphTexture>("GBuffer/ Normal", {kWidth, kHeight});
+      data.normal = builder.create<FrameGraphTexture>("GBuffer/ Normal", desc);
       data.normal = builder.write(data.normal);
-      data.albedo =
-        builder.create<FrameGraphTexture>("GBuffer/ Albedo", {kWidth, kHeight});
+      data.albedo = builder.create<FrameGraphTexture>("GBuffer/ Albedo", desc);
       data.albedo = builder.write(data.albedo);
     },
     [](const GBufferPass &data, FrameGraphPassResources &, void *) {

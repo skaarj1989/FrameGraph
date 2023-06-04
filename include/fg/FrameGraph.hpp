@@ -31,7 +31,7 @@ public:
     _VIRTUALIZABLE_CONCEPT
     /** Declares the creation of a resource. */
     [[nodiscard]] FrameGraphResource create(const std::string_view name,
-                                            typename T::Desc &&);
+                                            typename T::Desc);
     /** Declares read operation. */
     FrameGraphResource read(FrameGraphResource id, uint32_t flags = 0);
     /**

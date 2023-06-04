@@ -54,7 +54,7 @@ inline FrameGraphResource FrameGraph::_create(const std::string_view name,
 _VIRTUALIZABLE_CONCEPT_IMPL
 inline FrameGraphResource
 FrameGraph::Builder::create(const std::string_view name,
-                            typename T::Desc &&desc) {
+                            typename T::Desc desc) {
   const auto id = m_frameGraph._create<T>(name, std::move(desc));
   return m_passNode.m_creates.emplace_back(id);
 }
