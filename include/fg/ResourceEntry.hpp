@@ -1,5 +1,6 @@
 #pragma once
 
+#include "fg/TypeTraits.hpp"
 #include "fg/PassNode.hpp"
 
 // http://www.cplusplus.com/articles/oz18T05o/
