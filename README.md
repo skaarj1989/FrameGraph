@@ -6,7 +6,36 @@
 This is a renderer agnostic implementation of **FrameGraph**, inspired by the **GDC** presentation:
 [_FrameGraph: Extensible Rendering Architecture in Frostbite_](https://www.gdcvault.com/play/1024045/FrameGraph-Extensible-Rendering-Architecture-in) by Yuriy O'Donnell
 
+## Table of contents
+
+- [FrameGraph](#framegraph)
+  - [Table of contents](#table-of-contents)
+  - [How to use?](#how-to-use)
+    - [Resources](#resources)
+    - [Basic](#basic)
+    - [Blackboard](#blackboard)
+    - [Automatic resource bindings and barriers](#automatic-resource-bindings-and-barriers)
+    - [Visualization](#visualization)
+  - [Installation](#installation)
+  - [Example](#example)
+  - [License](#license)
+
 ## How to use?
+
+### Resources
+
+To integrate a resource with **FrameGraph**, the following requirements should be met.
+**T** is a type meeting the requirements of **FrameGraph** resource.
+
+| Expression                        | Type                                                                        | Description                                                                           |
+| --------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| <pre lang="cpp">T{}</pre>         | <pre lang="cpp">T</pre>                                                     | Is default/move constructible.                                                        |
+| <pre lang="cpp">T::Desc</pre>     | <pre lang="cpp">struct</pre>                                                | Resource descriptor.                                                                  |
+| <pre lang="cpp">T::create</pre>   | <pre lang="cpp">void(const T::Desc &, void \*)</pre>                        | A function used by implementation to create transient resource.                       |
+| <pre lang="cpp">T::destroy</pre>  | <pre lang="cpp">void(const T::Desc &, void \*)</pre>                        | A function used by implementation to destroy transient resource.                      |
+| <pre lang="cpp">T::preRead</pre>  | <pre lang="cpp">void(const T::Desc &, uint32_t flags, void \*context)</pre> | _(optional)_<br/>A function called before an execution lambda of a pass.              |
+| <pre lang="cpp">T::preWrite</pre> | <pre lang="cpp">void(const T::Desc &, uint32_t flags, void \*context)</pre> | _(optional)_<br/>A function called before an execution lambda of a pass.              |
+| <pre lang="cpp">T::toString</pre> | <pre lang="cpp">std::string(const T::Desc &)<pre>                           | _(optional)_<br/>Static function used to embed resource descriptor inside graph node. |
 
 ### Basic
 
@@ -120,6 +149,93 @@ void renderFrame(std::span<const Renderable> renderables) {
 }
 ```
 
+### Automatic resource bindings and barriers
+
+Implement `preRead/preWrite` in a resource struct.
+
+_Code snippets taken from my Vulkan renderer_
+
+```cpp
+// For convenience, use an implicit conversion operator.
+
+struct Attachment /* 21 bits */ {
+  uint32_t index{0};
+  std::optional<uint32_t> layer;
+  std::optional<uint32_t> face;
+  std::optional<ClearValue> clearValue;
+
+  operator uint32_t() const;
+};
+Attachment decodeAttachment(uint32_t flags);
+
+struct Location /* 7 bits */ {
+  uint32_t set{0};
+  uint32_t binding{0};
+
+  operator uint32_t() const;
+};
+Location decodeLocation(uint32_t flags);
+
+struct BindingInfo /* 13 bits */ {
+  Location location;
+  uint32_t pipelineStage{0};
+
+  operator uint32_t() const;
+};
+BindingInfo decodeBindingInfo(uint32_t flags);
+
+struct TextureRead /* 15 bits */ {
+  BindingInfo binding;
+
+  enum class Type { CombinedImageSampler, SampledImage, StorageImage }; // 2 bits
+  Type type;
+
+  operator uint32_t() const;
+};
+TextureRead decodeTextureRead(uint32_t flags);
+```
+
+```cpp
+struct FrameGraphTexture {
+  struct Desc { /* extent, pixel format ... */ };
+
+  void preRead(const Desc &desc, uint32_t flags, void *ctx) {
+    auto &rc = *static_cast<RenderContext *>(ctx);
+    // Decode flags, build DescriptorSet tables, insert barriers
+  }
+  void preWrite(const Desc &desc, uint32_t flags, void *ctx) {
+    auto &rc = *static_cast<RenderContext *>(ctx);
+    // Decode flags, build attachments (e.g VkRenderingInfo), insert barriers
+  }
+};
+```
+
+```cpp
+struct Data {
+  FrameGraphResource output;
+};
+fg.addCallbackPass<Data>(
+  "FXAA",
+  [&](FrameGraph::Builder &builder, Data &data) {
+    builder.read(input, TextureRead{
+                          .binding =
+                            {
+                              .location = {.set = 2, .binding = 0},
+                              .pipelineStage = PipelineStage_FragmentShader,
+                            },
+                          .type = TextureRead::Type::CombinedImageSampler,
+                        });
+
+    const auto &inputDesc = fg.getDescriptor<FrameGraphTexture>(input);
+    data.output = builder.create<FrameGraphTexture>("AA", inputDesc);
+    data.output = builder.write(data.output, Attachment{.index = 0});
+  },
+  [=](const Data &, const FrameGraphPassResources &, void *ctx) {
+    auto &rc = *static_cast<RenderContext *>(ctx);
+    renderFullScreenPostProcess(rc);
+  });
+```
+
 ### Visualization
 
 ```cpp
@@ -128,21 +244,6 @@ std::ofstream{"fg.dot"} << fg;
 
 ![graph](media/deferred_pipeline.svg)
 _(Graph created by one of tests)_
-
-### Resources
-
-To integrate a resource with **FrameGraph**, the following requirements should be met.
-**T** is a type meeting the requirements of **FrameGraph** resource.
-
-| Expression                        | Type                                                                        | Description                                                                           |
-| --------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| <pre lang="cpp">T{}</pre>         | <pre lang="cpp">T</pre>                                                     | Is default/move constructible.                                                        |
-| <pre lang="cpp">T::Desc</pre>     | <pre lang="cpp">struct</pre>                                                | Resource descriptor.                                                                  |
-| <pre lang="cpp">T::create</pre>   | <pre lang="cpp">void(const T::Desc &, void \*)</pre>                        | A function used by implementation to create transient resource.                       |
-| <pre lang="cpp">T::destroy</pre>  | <pre lang="cpp">void(const T::Desc &, void \*)</pre>                        | A function used by implementation to destroy transient resource.                      |
-| <pre lang="cpp">T::preRead</pre>  | <pre lang="cpp">void(const T::Desc &, uint32_t flags, void \*context)</pre> | _(optional)_<br/>A function called before an execution lambda of a pass.              |
-| <pre lang="cpp">T::preWrite</pre> | <pre lang="cpp">void(const T::Desc &, uint32_t flags, void \*context)</pre> | _(optional)_<br/>A function called before an execution lambda of a pass.              |
-| <pre lang="cpp">T::toString</pre> | <pre lang="cpp">std::string(const T::Desc &)<pre>                           | _(optional)_<br/>Static function used to embed resource descriptor inside graph node. |
 
 ## Installation
 
