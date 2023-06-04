@@ -139,7 +139,7 @@ To integrate a resource with **FrameGraph**, the following requirements should b
 | <pre lang="cpp">T{}</pre>         | <pre lang="cpp">T</pre>                              | Is default/move constructible.                                                        |
 | <pre lang="cpp">T::Desc</pre>     | <pre lang="cpp">struct</pre>                         | Resource descriptor.                                                                  |
 | <pre lang="cpp">T::create</pre>   | <pre lang="cpp">void(const T::Desc &, void \*)</pre> | A function used by implementation to create transient resource.                       |
-| <pre lang="cpp">T::destroy</pre>  | <pre lang="cpp">void(const T::Dest &, void \*)</pre> | A function used by implementation to destroy transient resource.                      |
+| <pre lang="cpp">T::destroy</pre>  | <pre lang="cpp">void(const T::Desc &, void \*)</pre> | A function used by implementation to destroy transient resource.                      |
 | <pre lang="cpp">T::toString</pre> | <pre lang="cpp">std::string(const T::Desc &)<pre>    | _(optional)_<br/>Static function used to embed resource descriptor inside graph node. |
 
 ## Installation
