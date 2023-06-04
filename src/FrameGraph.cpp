@@ -35,6 +35,12 @@ struct StyleSheet {
 // FrameGraph class:
 //
 
+void FrameGraph::reserve(uint32_t numPasses, uint32_t numResources) {
+  m_passNodes.reserve(numPasses);
+  m_resourceNodes.reserve(numResources);
+  m_resourceRegistry.reserve(numResources);
+}
+
 bool FrameGraph::isValid(FrameGraphResource id) const {
   const auto &node = _getResourceNode(id);
   auto &resource = m_resourceRegistry[node.m_resourceId];

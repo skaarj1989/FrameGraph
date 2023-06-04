@@ -52,6 +52,8 @@ public:
     PassNode &m_passNode;
   };
 
+  void reserve(uint32_t numPasses, uint32_t numResources);
+
   /**
    * @param setup Callback (lambda, may capture by reference), invoked
    * immediatly, declare operations here.

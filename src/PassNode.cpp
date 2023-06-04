@@ -33,7 +33,11 @@ bool PassNode::canExecute() const { return m_refCount > 0 || hasSideEffect(); }
 
 PassNode::PassNode(const std::string_view name, uint32_t id,
                    std::unique_ptr<FrameGraphPassConcept> &&exec)
-    : GraphNode{name, id}, m_exec{std::move(exec)} {}
+    : GraphNode{name, id}, m_exec{std::move(exec)} {
+  m_creates.reserve(10);
+  m_reads.reserve(10);
+  m_writes.reserve(10);
+}
 
 FrameGraphResource PassNode::_read(FrameGraphResource id, uint32_t flags) {
   assert(!creates(id) && !writes(id));
