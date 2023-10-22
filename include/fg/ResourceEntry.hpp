@@ -62,7 +62,7 @@ private:
     void destroy(void *allocator) final;
 
     void preRead(uint32_t flags, void *context) override {
-#if _HAS_CXX20
+#if __cplusplus >= 202002L
       if constexpr (has_preRead<T>)
 #else
       if constexpr (has_preRead<T>::value)
@@ -70,7 +70,7 @@ private:
         resource.preRead(descriptor, flags, context);
     }
     void preWrite(uint32_t flags, void *context) override {
-#if _HAS_CXX20
+#if __cplusplus >= 202002L
       if constexpr (has_preWrite<T>)
 #else
       if constexpr (has_preWrite<T>::value)

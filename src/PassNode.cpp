@@ -1,4 +1,5 @@
 #include "fg/PassNode.hpp"
+#include <algorithm>
 #include <cassert>
 
 namespace {

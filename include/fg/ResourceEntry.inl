@@ -44,7 +44,7 @@ inline void ResourceEntry::Model<T>::destroy(void *allocator) {
 
 template <typename T>
 inline std::string ResourceEntry::Model<T>::toString() const {
-#if _HAS_CXX20
+#if __cplusplus >= 202002L
   if constexpr (has_toString<T>)
 #else
   if constexpr (has_toString<T>::value)

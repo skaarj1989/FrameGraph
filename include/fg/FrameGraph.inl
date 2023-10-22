@@ -1,3 +1,5 @@
+#include <functional>
+
 //
 // FrameGraph class:
 //

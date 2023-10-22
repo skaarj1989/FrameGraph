@@ -57,13 +57,14 @@ public:
 
   void reserve(uint32_t numPasses, uint32_t numResources);
 
+  struct NoData {};
   /**
    * @param setup Callback (lambda, may capture by reference), invoked
    * immediatly, declare operations here.
    * @param exec Execution of this lambda is deferred until execute() phase
    * (must capture by value due to this).
    */
-  template <typename Data = std::monostate, typename Setup, typename Execute>
+  template <typename Data = NoData, typename Setup, typename Execute>
   const Data &addCallbackPass(const std::string_view name, Setup &&setup,
                               Execute &&exec);
 

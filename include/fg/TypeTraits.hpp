@@ -4,7 +4,7 @@
 
 // https://www.bfilipek.com/2016/02/notes-on-c-sfinae.html
 
-#if _HAS_CXX20
+#if __cplusplus >= 202002L
 #  include <concepts>
 
 template <typename T>

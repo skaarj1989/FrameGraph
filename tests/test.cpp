@@ -10,8 +10,8 @@ struct BadResource {
   void destroy() {}
 };
 static_assert(
-#if _HAS_CXX20
-  not Virtualizable<BadResource>
+#if __cplusplus >= 202002L
+  !Virtualizable<BadResource>
 #else
   !is_resource<BadResource>()
 #endif
@@ -41,7 +41,7 @@ struct FrameGraphTexture {
   int32_t id{-1};
 };
 
-#if _HAS_CXX20
+#if __cplusplus >= 202002L
 static_assert(Virtualizable<FrameGraphTexture>);
 static_assert(has_preRead<FrameGraphTexture>);
 static_assert(!has_preWrite<FrameGraphTexture>);
