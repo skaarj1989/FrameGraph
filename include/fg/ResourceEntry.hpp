@@ -2,7 +2,6 @@
 
 #include "fg/TypeTraits.hpp"
 #include "fg/PassNode.hpp"
-#include "fg/TypeTraits.hpp"
 
 // http://www.cplusplus.com/articles/oz18T05o/
 // https://www.modernescpp.com/index.php/c-core-guidelines-type-erasure-with-templates
