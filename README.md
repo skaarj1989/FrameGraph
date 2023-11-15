@@ -16,6 +16,7 @@ This is a renderer agnostic implementation of **FrameGraph**, inspired by the **
     - [Blackboard](#blackboard)
     - [Automatic resource bindings and barriers](#automatic-resource-bindings-and-barriers)
     - [Visualization](#visualization)
+      - [Custom writer](#custom-writer)
   - [Installation](#installation)
   - [Example](#example)
   - [License](#license)
@@ -239,11 +240,38 @@ fg.addCallbackPass<Data>(
 ### Visualization
 
 ```cpp
+// Built in graphviz writer.
 std::ofstream{"fg.dot"} << fg;
 ```
 
 ![graph](media/deferred_pipeline.svg)
 _(Graph created by one of tests)_
+
+#### Custom writer
+
+Implement a struct with the following methods:
+
+```cpp
+struct JsonWriter {
+  nlohmann::json j;
+
+  void operator()(const PassNode &node,
+                  const std::vector<ResourceNode> &resourceNodes) {
+    // ...
+  }
+  void operator()(const ResourceNode &node, const ResourceEntry &entry,
+                  const std::vector<PassNode> &passNodes) {
+    // ...
+  }
+
+  void flush(std::ostream &os) const { os << std::setw(2) << j << "\n"; }
+};
+```
+
+```cpp
+std::ofstream f{"fg.json"};
+fg.debugOutput(f, JsonWriter{});
+```
 
 ## Installation
 

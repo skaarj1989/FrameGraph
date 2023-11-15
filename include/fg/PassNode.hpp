@@ -24,6 +24,13 @@ public:
   [[nodiscard]] bool hasSideEffect() const;
   [[nodiscard]] bool canExecute() const;
 
+  struct Create {};
+  [[nodiscard]] decltype(auto) each(const Create) const { return m_creates; }
+  struct Read {};
+  [[nodiscard]] decltype(auto) each(const Read) const { return m_reads; }
+  struct Write {};
+  [[nodiscard]] decltype(auto) each(const Write) const { return m_writes; }
+
 private:
   PassNode(const std::string_view name, uint32_t id,
            std::unique_ptr<FrameGraphPassConcept> &&);

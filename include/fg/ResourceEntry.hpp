@@ -31,6 +31,7 @@ public:
     m_concept->preWrite(flags, context);
   }
 
+  [[nodiscard]] uint32_t getId() const;
   [[nodiscard]] uint32_t getVersion() const;
   [[nodiscard]] bool isImported() const;
   [[nodiscard]] bool isTransient() const;

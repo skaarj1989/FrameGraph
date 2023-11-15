@@ -11,6 +11,7 @@ void ResourceEntry::destroy(void *allocator) {
   m_concept->destroy(allocator);
 }
 
+uint32_t ResourceEntry::getId() const { return m_id; }
 uint32_t ResourceEntry::getVersion() const { return m_version; }
 bool ResourceEntry::isImported() const { return m_imported; }
 bool ResourceEntry::isTransient() const { return !m_imported; }

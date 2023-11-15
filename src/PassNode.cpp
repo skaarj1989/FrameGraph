@@ -43,7 +43,9 @@ bool PassNode::writes(FrameGraphResource id) const {
 
 bool PassNode::hasSideEffect() const { return m_hasSideEffect; }
 
-bool PassNode::canExecute() const { return m_refCount > 0 || hasSideEffect(); }
+bool PassNode::canExecute() const {
+  return getRefCount() > 0 || hasSideEffect();
+}
 
 PassNode::PassNode(const std::string_view name, uint32_t id,
                    std::unique_ptr<FrameGraphPassConcept> &&exec)

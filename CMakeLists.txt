@@ -45,12 +45,14 @@ add_library(
   "include/fg/ResourceEntry.inl"
   "include/fg/Blackboard.hpp"
   "include/fg/Blackboard.inl"
+  "include/fg/GraphvizWriter.hpp"
   "include/fg/Fwd.hpp"
   "src/FrameGraph.cpp"
   "src/GraphNode.cpp"
   "src/PassNode.cpp"
   "src/ResourceNode.cpp"
-  "src/ResourceEntry.cpp")
+  "src/ResourceEntry.cpp"
+  "src/GraphvizWriter.cpp")
 
 target_include_directories(
   FrameGraph PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

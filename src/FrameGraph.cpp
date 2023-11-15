@@ -1,35 +1,6 @@
 #include "fg/FrameGraph.hpp"
+#include "fg/GraphvizWriter.hpp"
 #include <stack>
-#include <sstream>
-
-namespace {
-
-struct StyleSheet {
-  bool useClusters{true};
-  const char *rankDir{"TB"}; // TB, LR, BT, RL
-
-  struct {
-    const char *name{"helvetica"};
-    int32_t size{10};
-  } font;
-  struct {
-    // https://graphviz.org/doc/info/colors.html
-    struct {
-      const char *executed{"orange"};
-      const char *culled{"lightgray"};
-    } pass;
-    struct {
-      const char *imported{"lightsteelblue"};
-      const char *transient{"skyblue"};
-    } resource;
-    struct {
-      const char *read{"olivedrab3"};
-      const char *write{"orangered"};
-    } edge;
-  } color;
-};
-
-} // namespace
 
 //
 // FrameGraph class:
@@ -117,107 +88,6 @@ void FrameGraph::execute(void *context, void *allocator) {
   }
 }
 
-void FrameGraph::exportGraphviz(std::ostream &os) const {
-  // https://www.graphviz.org/pdf/dotguide.pdf
-
-  static StyleSheet style;
-
-  os << "digraph FrameGraph {" << std::endl;
-  os << "graph [style=invis, rankdir=\"" << style.rankDir
-     << "\" ordering=out, splines=spline]" << std::endl;
-  os << "node [shape=record, fontname=\"" << style.font.name
-     << "\", fontsize=" << style.font.size << ", margin=\"0.2,0.03\"]"
-     << std::endl
-     << std::endl;
-
-  // -- Define pass nodes
-
-  for (const PassNode &node : m_passNodes) {
-    os << "P" << node.m_id << " [label=<{ {<B>" << node.m_name << "</B>} | {"
-       << (node.hasSideEffect() ? "&#x2605; " : "")
-       << "Refs: " << node.m_refCount << "<BR/> Index: " << node.m_id
-       << "} }> style=\"rounded,filled\", fillcolor="
-       << ((node.m_refCount > 0 || node.hasSideEffect())
-             ? style.color.pass.executed
-             : style.color.pass.culled);
-
-    os << "]" << std::endl;
-  }
-  os << std::endl;
-
-  // -- Define resource nodes
-
-  for (const ResourceNode &node : m_resourceNodes) {
-    const auto &entry = m_resourceRegistry[node.m_resourceId];
-    os << "R" << entry.m_id << "_" << node.m_version << " [label=<{ {<B>"
-       << node.m_name << "</B>";
-    if (node.m_version > kResourceInitialVersion) {
-      // FIXME: Bold text overlaps regular text
-      os << "   <FONT>v" + std::to_string(node.m_version) + "</FONT>";
-    }
-    os << "<BR/>" << entry.toString() << "} | {Index: " << entry.m_id << "<BR/>"
-       << "Refs : " << node.m_refCount << "} }> style=filled, fillcolor="
-       << (entry.isImported() ? style.color.resource.imported
-                              : style.color.resource.transient);
-
-    os << "]" << std::endl;
-  }
-  os << std::endl;
-
-  // -- Each pass node points to resource that it writes
-
-  for (const PassNode &node : m_passNodes) {
-    os << "P" << node.m_id << " -> { ";
-    for (auto &[id, _] : node.m_writes) {
-      const auto &written = m_resourceNodes[id];
-      os << "R" << written.m_resourceId << "_" << written.m_version << " ";
-    }
-    os << "} [color=" << style.color.edge.write << "]" << std::endl;
-  }
-
-  // -- Each resource node points to pass where it's consumed
-
-  os << std::endl;
-  for (const ResourceNode &node : m_resourceNodes) {
-    os << "R" << node.m_resourceId << "_" << node.m_version << " -> { ";
-    // find all readers of this resource node
-    for (const PassNode &pass : m_passNodes) {
-      for (const auto &[id, _] : pass.m_reads)
-        if (id == node.m_id) os << "P" << pass.m_id << " ";
-    }
-    os << "} [color=" << style.color.edge.read << "]" << std::endl;
-  }
-  os << std::endl;
-
-  // -- Clusters:
-
-  if (style.useClusters) {
-    for (const PassNode &node : m_passNodes) {
-      os << "subgraph cluster_" << node.m_id << " {" << std::endl;
-
-      os << "P" << node.m_id << " ";
-      for (auto id : node.m_creates) {
-        const auto &r = m_resourceNodes[id];
-        os << "R" << r.m_resourceId << "_" << r.m_version << " ";
-      }
-      os << std::endl << "}" << std::endl;
-    }
-    os << std::endl;
-
-    os << "subgraph cluster_imported_resources {" << std::endl;
-    os << "graph [style=dotted, fontname=\"helvetica\", label=< "
-          "<B>Imported</B> >]"
-       << std::endl;
-
-    for (const ResourceEntry &entry : m_resourceRegistry) {
-      if (entry.isImported()) os << "R" << entry.m_id << "_1 ";
-    }
-    os << std::endl << "}" << std::endl << std::endl;
-  }
-
-  os << "}";
-}
-
 // ---
 
 PassNode &
@@ -240,8 +110,12 @@ FrameGraphResource FrameGraph::_clone(FrameGraphResource id) {
   entry.m_version++;
 
   const auto cloneId = static_cast<uint32_t>(m_resourceNodes.size());
-  m_resourceNodes.emplace_back(
-    ResourceNode{node.m_name, cloneId, node.m_resourceId, entry.getVersion()});
+  m_resourceNodes.emplace_back(ResourceNode{
+    node.getName(),
+    cloneId,
+    node.m_resourceId,
+    entry.getVersion(),
+  });
   return cloneId;
 }
 
@@ -258,8 +132,7 @@ ResourceEntry &FrameGraph::_getResourceEntry(FrameGraphResource id) {
 // ---
 
 std::ostream &operator<<(std::ostream &os, const FrameGraph &fg) {
-  fg.exportGraphviz(os);
-  return os;
+  return fg.debugOutput(os, graphviz::Writer{});
 }
 
 //

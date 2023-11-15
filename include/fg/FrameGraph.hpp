@@ -84,7 +84,8 @@ public:
   /** Invokes execution callbacks. */
   void execute(void *context = nullptr, void *allocator = nullptr);
 
-  void exportGraphviz(std::ostream &) const;
+  template <class Writer>
+  std::ostream &debugOutput(std::ostream &, Writer &&) const;
 
 private:
   [[nodiscard]] PassNode &

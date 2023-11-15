@@ -39,6 +39,19 @@ inline FrameGraphResource FrameGraph::import(const std::string_view name,
   return _createResourceNode(name, resourceId).m_id;
 }
 
+template <class Writer>
+inline std::ostream &FrameGraph::debugOutput(std::ostream &os,
+                                             Writer &&writer) const {
+  for (const auto &node : m_passNodes) {
+    writer(node, m_resourceNodes);
+  }
+  for (const auto &node : m_resourceNodes) {
+    writer(node, m_resourceRegistry[node.m_resourceId], m_passNodes);
+  }
+  writer.flush(os);
+  return os;
+}
+
 _VIRTUALIZABLE_CONCEPT_IMPL
 inline FrameGraphResource FrameGraph::_create(const std::string_view name,
                                               typename T::Desc &&desc) {
