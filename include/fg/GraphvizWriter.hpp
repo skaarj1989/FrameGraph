@@ -1,7 +1,9 @@
 #pragma once
 
+#include "fg/PassNode.hpp"
 #include "fg/ResourceNode.hpp"
 #include "fg/ResourceEntry.hpp"
+#include <vector>
 
 namespace graphviz {
 

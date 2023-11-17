@@ -1,22 +1,29 @@
 #pragma once
 
-#include "fg/PassNode.hpp"
+#include "fg/GraphNode.hpp"
 
-constexpr uint32_t kResourceInitialVersion{1u};
+class PassNode;
 
 class ResourceNode final : public GraphNode {
   friend class FrameGraph;
 
 public:
+  ResourceNode(const ResourceNode &) = delete;
+  ResourceNode(ResourceNode &&) noexcept = default;
+
+  ResourceNode &operator=(const ResourceNode &) = delete;
+  ResourceNode &operator=(ResourceNode &&) noexcept = delete;
+
   [[nodiscard]] auto getResourceId() const { return m_resourceId; }
   [[nodiscard]] auto getVersion() const { return m_version; }
 
 private:
-  ResourceNode(const std::string_view name, uint32_t id, uint32_t resourceId,
-               uint32_t version);
+  ResourceNode(const std::string_view name, uint32_t nodeId,
+               uint32_t resourceId, uint32_t version)
+      : GraphNode{name, nodeId}, m_resourceId{resourceId}, m_version{version} {}
 
 private:
-  // Index to virtual resource (m_resourceRegistry in FrameGraph)
+  // Index to virtual resource (FrameGraph::m_resourceRegistry).
   const uint32_t m_resourceId;
   const uint32_t m_version;
 

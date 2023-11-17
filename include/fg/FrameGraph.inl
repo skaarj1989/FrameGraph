@@ -22,24 +22,21 @@ inline const Data &FrameGraph::addCallbackPass(const std::string_view name,
   return pass->data;
 }
 
-_VIRTUALIZABLE_CONCEPT_IMPL
+template <_VIRTUALIZABLE_CONCEPT_IMPL(T)>
 inline const typename T::Desc &
-FrameGraph::getDescriptor(FrameGraphResource id) {
-  return _getResourceEntry(id)._getModel<T>()->descriptor;
+FrameGraph::getDescriptor(FrameGraphResource id) const {
+  return _getResourceEntry(id).getDescriptor<T>();
 }
 
-_VIRTUALIZABLE_CONCEPT_IMPL
+template <_VIRTUALIZABLE_CONCEPT_IMPL(T)>
 inline FrameGraphResource FrameGraph::import(const std::string_view name,
-                                             typename T::Desc &&desc,
+                                             const typename T::Desc &desc,
                                              T &&resource) {
-  const auto resourceId = static_cast<uint32_t>(m_resourceRegistry.size());
-  m_resourceRegistry.emplace_back(
-    ResourceEntry{resourceId, std::forward<typename T::Desc>(desc),
-                  std::forward<T>(resource), kResourceInitialVersion, true});
-  return _createResourceNode(name, resourceId).m_id;
+  return _create<T>(ResourceEntry::Type::Imported, name, desc,
+                    std::forward<T>(resource));
 }
 
-template <class Writer>
+template <typename Writer>
 inline std::ostream &FrameGraph::debugOutput(std::ostream &os,
                                              Writer &&writer) const {
   for (const auto &node : m_passNodes) {
@@ -52,25 +49,30 @@ inline std::ostream &FrameGraph::debugOutput(std::ostream &os,
   return os;
 }
 
-_VIRTUALIZABLE_CONCEPT_IMPL
-inline FrameGraphResource FrameGraph::_create(const std::string_view name,
-                                              typename T::Desc &&desc) {
+//
+// (private):
+//
+
+template <_VIRTUALIZABLE_CONCEPT_IMPL(T)>
+inline FrameGraphResource
+FrameGraph::_create(const ResourceEntry::Type type, const std::string_view name,
+                    const typename T::Desc &desc, T &&resource) {
   const auto resourceId = static_cast<uint32_t>(m_resourceRegistry.size());
   m_resourceRegistry.emplace_back(
-    ResourceEntry{resourceId, std::forward<typename T::Desc>(desc), T{},
-                  kResourceInitialVersion});
-  return _createResourceNode(name, resourceId).m_id;
+    ResourceEntry{type, resourceId, desc, std::forward<T>(resource)});
+  return _createResourceNode(name, resourceId).getId();
 }
 
 //
 // FrameGraph::Builder class:
 //
 
-_VIRTUALIZABLE_CONCEPT_IMPL
+template <_VIRTUALIZABLE_CONCEPT_IMPL(T)>
 inline FrameGraphResource
 FrameGraph::Builder::create(const std::string_view name,
-                            typename T::Desc desc) {
-  const auto id = m_frameGraph._create<T>(name, std::move(desc));
+                            const typename T::Desc &desc) {
+  const auto id =
+    m_frameGraph._create<T>(ResourceEntry::Type::Transient, name, desc, T{});
   return m_passNode.m_creates.emplace_back(id);
 }
 
@@ -78,17 +80,16 @@ FrameGraph::Builder::create(const std::string_view name,
 // FrameGraphPassResources class:
 //
 
-_VIRTUALIZABLE_CONCEPT_IMPL
+template <_VIRTUALIZABLE_CONCEPT_IMPL(T)>
 inline T &FrameGraphPassResources::get(FrameGraphResource id) {
   assert(m_passNode.reads(id) || m_passNode.creates(id) ||
          m_passNode.writes(id));
   return m_frameGraph._getResourceEntry(id).get<T>();
 }
-
-_VIRTUALIZABLE_CONCEPT_IMPL
+template <_VIRTUALIZABLE_CONCEPT_IMPL(T)>
 inline const typename T::Desc &
 FrameGraphPassResources::getDescriptor(FrameGraphResource id) const {
   assert(m_passNode.reads(id) || m_passNode.creates(id) ||
          m_passNode.writes(id));
-  return m_frameGraph._getResourceEntry(id).getDescriptor<T>();
+  return m_frameGraph.getDescriptor<T>(id);
 }

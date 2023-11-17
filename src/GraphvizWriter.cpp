@@ -1,9 +1,9 @@
 #include "fg/GraphvizWriter.hpp"
-#include <cassert>
 #include <sstream>
-#if __has_include(<format>)
+#if __cplusplus >= 202002L
 #  include <format>
 #endif
+#include <cassert>
 
 // https://www.graphviz.org/pdf/dotguide.pdf
 
@@ -13,12 +13,10 @@ namespace {
 
 [[nodiscard]] auto toString(const Color color) {
 #define CASE(Value)                                                            \
-  case Value:                                                                  \
+  case Color::Value:                                                           \
     return #Value
 
   switch (color) {
-    using enum Color;
-
     CASE(aliceblue);
     CASE(antiquewhite);
     CASE(aqua);
@@ -173,20 +171,20 @@ namespace {
 #undef CASE
 }
 [[nodiscard]] auto toString(const RankDir rankDir) {
-  switch (rankDir) {
-    using enum RankDir;
+#define CASE(Value)                                                            \
+  case RankDir::Value:                                                         \
+    return #Value
 
-  case TB:
-    return "TB";
-  case BT:
-    return "BT";
-  case LR:
-    return "LR";
-  case RL:
-    return "RL";
+  switch (rankDir) {
+    CASE(TB);
+    CASE(BT);
+    CASE(LR);
+    CASE(RL);
   }
   assert(false);
   return "";
+
+#undef CASE
 }
 
 std::ostream &operator<<(std::ostream &os, const Graph::Style &style) {
@@ -238,7 +236,7 @@ std::ostream &operator<<(std::ostream &os, const Graph &graph) {
        << ", label=< <B>Imported</B> >]"
           "\n";
     for (const auto id : graph.imported) {
-      os << "R" << id << "_" << kResourceInitialVersion << " ";
+      os << "R" << id << "_" << ResourceEntry::kInitialVersion << " ";
     }
     os << "\n}\n";
   }
@@ -247,14 +245,14 @@ std::ostream &operator<<(std::ostream &os, const Graph &graph) {
 }
 
 [[nodiscard]] auto makeKey(const PassNode &node) {
-#if __has_include(<format>)
+#if __cplusplus >= 202002L
   return std::format("P{}", node.getId());
 #else
   return "P" + std::to_string(node.getId());
 #endif
 }
 [[nodiscard]] auto makeKey(const ResourceNode &node) {
-#if __has_include(<format>)
+#if __cplusplus >= 202002L
   return std::format("R{}_{}", node.getResourceId(), node.getVersion());
 #else
   return "R" + std::to_string(node.getResourceId()) + "_" +
@@ -275,7 +273,7 @@ std::ostream &operator<<(std::ostream &os, const Graph &graph) {
   std::ostringstream oss;
   oss << "{ {<B>" << node.getName() << "</B>";
   if (const auto version = node.getVersion();
-      version > kResourceInitialVersion) {
+      version > ResourceEntry::kInitialVersion) {
     oss << "   <FONT>v" << version << "</FONT>";
   }
   oss << "<BR/>" << entry.toString() << "} | {Index: " << entry.getId()
@@ -303,14 +301,17 @@ Graph::Graph(Style style_) : style{std::move(style_)} {
 void Writer::operator()(const PassNode &node,
                         const std::vector<ResourceNode> &resourceNodes) {
   auto key = makeKey(node);
-  auto &vertex = graph.vertices.emplace_back(
-    key, stringify(node),
-    node.canExecute() ? colors.pass.executed : colors.pass.culled);
+  auto &vertex = graph.vertices.emplace_back(Graph::Vertex{
+    key,
+    stringify(node),
+    node.canExecute() ? colors.pass.executed : colors.pass.culled,
+  });
   for (const auto id : node.each(PassNode::Create{})) {
     vertex.cluster.emplace_back(makeKey(resourceNodes[id]));
   }
 
-  auto &edge = graph.edges.emplace_back(std::move(key), colors.edge.write);
+  auto &edge =
+    graph.edges.emplace_back(Graph::Edge{std::move(key), colors.edge.write});
   for (const auto [id, _] : node.each(PassNode::Write{})) {
     edge.vertices.emplace_back(makeKey(resourceNodes[id]));
   }
@@ -319,11 +320,14 @@ void Writer::operator()(const PassNode &node,
 void Writer::operator()(const ResourceNode &node, const ResourceEntry &entry,
                         const std::vector<PassNode> &passNodes) {
   auto key = makeKey(node);
-  graph.vertices.emplace_back(key, stringify(node, entry),
-                              entry.isImported() ? colors.resource.imported
-                                                 : colors.resource.transient);
+  graph.vertices.emplace_back(Graph::Vertex{
+    key,
+    stringify(node, entry),
+    entry.isImported() ? colors.resource.imported : colors.resource.transient,
+  });
 
-  auto &edge = graph.edges.emplace_back(std::move(key), colors.edge.read);
+  auto &edge =
+    graph.edges.emplace_back(Graph::Edge{std::move(key), colors.edge.read});
   for (const auto &pass : passNodes) {
     if (pass.reads(node.getId())) {
       edge.vertices.emplace_back(makeKey(pass));

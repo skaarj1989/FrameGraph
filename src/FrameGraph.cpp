@@ -14,18 +14,17 @@ void FrameGraph::reserve(uint32_t numPasses, uint32_t numResources) {
 
 bool FrameGraph::isValid(FrameGraphResource id) const {
   const auto &node = _getResourceNode(id);
-  auto &resource = m_resourceRegistry[node.m_resourceId];
-  return node.m_version == resource.m_version;
+  return node.getVersion() == _getResourceEntry(node).getVersion();
 }
 
 void FrameGraph::compile() {
   for (auto &pass : m_passNodes) {
-    pass.m_refCount = pass.m_writes.size();
-    for (auto &[id, _] : pass.m_reads) {
+    pass.m_refCount = static_cast<int32_t>(pass.m_writes.size());
+    for (const auto [id, _] : pass.m_reads) {
       auto &consumed = m_resourceNodes[id];
       consumed.m_refCount++;
     }
-    for (auto &[id, _] : pass.m_writes) {
+    for (const auto [id, _] : pass.m_writes) {
       auto &written = m_resourceNodes[id];
       written.m_producer = &pass;
     }
@@ -34,9 +33,9 @@ void FrameGraph::compile() {
   // -- Culling:
 
   std::stack<ResourceNode *> unreferencedResources;
-  for (auto &node : m_resourceNodes)
+  for (auto &node : m_resourceNodes) {
     if (node.m_refCount == 0) unreferencedResources.push(&node);
-
+  }
   while (!unreferencedResources.empty()) {
     auto *unreferencedResource = unreferencedResources.top();
     unreferencedResources.pop();
@@ -45,7 +44,7 @@ void FrameGraph::compile() {
 
     assert(producer->m_refCount >= 1);
     if (--producer->m_refCount == 0) {
-      for (auto &[id, _] : producer->m_reads) {
+      for (const auto [id, _] : producer->m_reads) {
         auto &node = m_resourceNodes[id];
         if (--node.m_refCount == 0) unreferencedResources.push(&node);
       }
@@ -57,38 +56,41 @@ void FrameGraph::compile() {
   for (auto &pass : m_passNodes) {
     if (pass.m_refCount == 0) continue;
 
-    for (auto id : pass.m_creates)
+    for (const auto id : pass.m_creates)
       _getResourceEntry(id).m_producer = &pass;
-    for (auto &[id, _] : pass.m_writes)
+    for (const auto [id, _] : pass.m_writes)
       _getResourceEntry(id).m_last = &pass;
-    for (auto &[id, _] : pass.m_reads)
+    for (const auto [id, _] : pass.m_reads)
       _getResourceEntry(id).m_last = &pass;
   }
 }
 void FrameGraph::execute(void *context, void *allocator) {
-  for (auto &pass : m_passNodes) {
+  for (const auto &pass : m_passNodes) {
     if (!pass.canExecute()) continue;
 
-    for (auto id : pass.m_creates)
+    for (const auto id : pass.m_creates)
       _getResourceEntry(id).create(allocator);
 
-    for (auto &&[id, flags] : pass.m_reads) {
+    for (const auto [id, flags] : pass.m_reads) {
       if (flags != kFlagsIgnored) _getResourceEntry(id).preRead(flags, context);
     }
-    for (auto &&[id, flags] : pass.m_writes) {
+    for (const auto [id, flags] : pass.m_writes) {
       if (flags != kFlagsIgnored)
         _getResourceEntry(id).preWrite(flags, context);
     }
     FrameGraphPassResources resources{*this, pass};
     std::invoke(*pass.m_exec, resources, context);
 
-    for (auto &entry : m_resourceRegistry)
+    for (auto &entry : m_resourceRegistry) {
       if (entry.m_last == &pass && entry.isTransient())
         entry.destroy(allocator);
+    }
   }
 }
 
-// ---
+//
+// (private):
+//
 
 PassNode &
 FrameGraph::_createPassNode(const std::string_view name,
@@ -98,33 +100,32 @@ FrameGraph::_createPassNode(const std::string_view name,
 }
 
 ResourceNode &FrameGraph::_createResourceNode(const std::string_view name,
-                                              uint32_t resourceId) {
+                                              uint32_t resourceId,
+                                              uint32_t version) {
   const auto id = static_cast<uint32_t>(m_resourceNodes.size());
   return m_resourceNodes.emplace_back(
-    ResourceNode{name, id, resourceId, kResourceInitialVersion});
+    ResourceNode{name, id, resourceId, version});
 }
 FrameGraphResource FrameGraph::_clone(FrameGraphResource id) {
   const auto &node = _getResourceNode(id);
-  assert(node.m_resourceId < m_resourceRegistry.size());
-  auto &entry = m_resourceRegistry[node.m_resourceId];
+  auto &entry = _getResourceEntry(node);
   entry.m_version++;
 
-  const auto cloneId = static_cast<uint32_t>(m_resourceNodes.size());
-  m_resourceNodes.emplace_back(ResourceNode{
-    node.getName(),
-    cloneId,
-    node.m_resourceId,
-    entry.getVersion(),
-  });
-  return cloneId;
+  const auto &clone = _createResourceNode(node.getName(), node.getResourceId(),
+                                          entry.getVersion());
+  return clone.getId();
 }
 
 const ResourceNode &FrameGraph::_getResourceNode(FrameGraphResource id) const {
   assert(id < m_resourceNodes.size());
   return m_resourceNodes[id];
 }
-ResourceEntry &FrameGraph::_getResourceEntry(FrameGraphResource id) {
-  const auto &node = _getResourceNode(id);
+const ResourceEntry &
+FrameGraph::_getResourceEntry(FrameGraphResource id) const {
+  return _getResourceEntry(_getResourceNode(id));
+}
+const ResourceEntry &
+FrameGraph::_getResourceEntry(const ResourceNode &node) const {
   assert(node.m_resourceId < m_resourceRegistry.size());
   return m_resourceRegistry[node.m_resourceId];
 }
@@ -161,18 +162,3 @@ FrameGraphResource FrameGraph::Builder::write(FrameGraphResource id,
     return m_passNode._write(m_frameGraph._clone(id), flags);
   }
 }
-
-FrameGraph::Builder &FrameGraph::Builder::setSideEffect() {
-  m_passNode.m_hasSideEffect = true;
-  return *this;
-}
-
-FrameGraph::Builder::Builder(FrameGraph &fg, PassNode &node)
-    : m_frameGraph{fg}, m_passNode{node} {}
-
-//
-// FrameGraphPassResources class:
-//
-
-FrameGraphPassResources::FrameGraphPassResources(FrameGraph &fg, PassNode &node)
-    : m_frameGraph{fg}, m_passNode{node} {}

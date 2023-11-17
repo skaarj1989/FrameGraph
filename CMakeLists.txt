@@ -6,9 +6,7 @@ if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
     CACHE STRING "")
 endif()
 
-message(STATUS "TOOLCHAIN: ${CMAKE_TOOLCHAIN_FILE}")
-
-project(FrameGraph)
+project(FrameGraph LANGUAGES CXX)
 
 if(PROJECT_BINARY_DIR STREQUAL PROJECT_SOURCE_DIR)
   message(
@@ -31,8 +29,7 @@ endif()
 
 option(FG_BUILD_TEST "Build unit tests" ON)
 
-add_library(
-  FrameGraph
+add_library(FrameGraph
   "include/fg/TypeTraits.hpp"
   "include/fg/FrameGraphResource.hpp"
   "include/fg/FrameGraph.hpp"
@@ -48,11 +45,13 @@ add_library(
   "include/fg/GraphvizWriter.hpp"
   "include/fg/Fwd.hpp"
   "src/FrameGraph.cpp"
-  "src/GraphNode.cpp"
   "src/PassNode.cpp"
-  "src/ResourceNode.cpp"
-  "src/ResourceEntry.cpp"
-  "src/GraphvizWriter.cpp")
+  "src/GraphvizWriter.cpp"
+)
+
+if(MSVC)
+  target_compile_options(FrameGraph PUBLIC "/Zc:__cplusplus")
+endif()
 
 target_include_directories(
   FrameGraph PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

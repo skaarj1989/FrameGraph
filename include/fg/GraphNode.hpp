@@ -22,10 +22,12 @@ public:
   [[nodiscard]] auto getRefCount() const { return m_refCount; }
 
 protected:
-  GraphNode(const std::string_view name, uint32_t id);
+  GraphNode(const std::string_view name, uint32_t id)
+      : m_name{name}, m_id{id} {}
 
 private:
-  const std::string m_name;
-  const uint32_t m_id; // Unique id, matches an array index in FrameGraph
+  std::string m_name;
+  // Unique id, matches an array index in FrameGraph.
+  const uint32_t m_id;
   int32_t m_refCount{0};
 };

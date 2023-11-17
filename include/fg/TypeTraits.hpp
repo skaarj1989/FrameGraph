@@ -9,16 +9,16 @@
 
 template <typename T>
 concept Virtualizable = requires(T t) {
-  requires std::is_default_constructible_v<T> &&
-    std::is_move_constructible_v<T>;
+  requires std::conjunction_v<std::is_default_constructible<T>,
+                              std::is_move_constructible<T>>;
 
   typename T::Desc;
   { t.create(typename T::Desc{}, (void *)nullptr) } -> std::same_as<void>;
   { t.destroy(typename T::Desc{}, (void *)nullptr) } -> std::same_as<void>;
 };
 
-#  define _VIRTUALIZABLE_CONCEPT template <Virtualizable T>
-#  define _VIRTUALIZABLE_CONCEPT_IMPL _VIRTUALIZABLE_CONCEPT
+#  define _VIRTUALIZABLE_CONCEPT(T) Virtualizable T
+#  define _VIRTUALIZABLE_CONCEPT_IMPL(T) _VIRTUALIZABLE_CONCEPT(T)
 
 template <typename T>
 concept has_preRead = requires(T t) {
@@ -40,83 +40,41 @@ concept has_toString = requires() {
 template <typename T, typename = void> struct has_Desc : std::false_type {};
 template <typename T>
 struct has_Desc<T, std::void_t<typename T::Desc>> : std::true_type {};
-template <typename T> inline constexpr bool has_Desc_v = has_Desc<T>::value;
 
-template <typename T> struct has_create {
-  template <typename U> static constexpr std::false_type test(...) {
-    return {};
-  }
-  template <typename U>
-  static constexpr auto test(U *u) ->
-    typename std::is_same<void,
-                          decltype(u->create(typename T::Desc{},
-                                             std::declval<void *>()))>::type {
-    return {};
-  }
+#  define DETECT_FUNCTION(function, ...)                                       \
+    template <typename T> struct has_##function {                              \
+      template <typename U> static constexpr std::false_type test(...) {       \
+        return {};                                                             \
+      }                                                                        \
+      template <typename U>                                                    \
+      static constexpr auto test(U *u) ->                                      \
+        typename std::is_same<void,                                            \
+                              decltype(u->function(__VA_ARGS__))>::type {      \
+        return {};                                                             \
+      }                                                                        \
+      static constexpr bool value{test<T>(nullptr)};                           \
+    };
 
-  static constexpr bool value{test<T>(nullptr)};
-};
-template <typename T> inline constexpr bool has_create_v = has_create<T>::value;
+DETECT_FUNCTION(create, typename T::Desc{}, (void *)nullptr)
+DETECT_FUNCTION(destroy, typename T::Desc{}, (void *)nullptr)
 
-template <typename T> struct has_destroy {
-  template <typename U> static constexpr std::false_type test(...) {
-    return {};
-  }
-  template <typename U>
-  static constexpr auto test(U *u) ->
-    typename std::is_same<void,
-                          decltype(u->destroy(typename T::Desc{},
-                                              std::declval<void *>()))>::type {
-    return {};
-  }
-
-  static constexpr bool value{test<T>(nullptr)};
-};
 template <typename T>
-inline constexpr bool has_destroy_v = has_destroy<T>::value;
+inline constexpr bool is_resource =
+  std::conjunction_v<std::is_default_constructible<T>,
+                     std::is_move_constructible<T>, has_Desc<T>, has_create<T>,
+                     has_destroy<T>>;
 
-template <typename T> constexpr bool is_resource() {
-  return std::is_default_constructible_v<T> &&
-         std::is_move_constructible_v<T> && has_Desc_v<T> && has_create_v<T> &&
-         has_destroy_v<T>;
-}
+#  define _VIRTUALIZABLE_CONCEPT_IMPL(T)                                       \
+    typename T, std::enable_if_t<is_resource<T>, bool>
+#  define _VIRTUALIZABLE_CONCEPT(T) _VIRTUALIZABLE_CONCEPT_IMPL(T) = true
 
-#  define _VIRTUALIZABLE_CONCEPT                                               \
-    template <typename T, std::enable_if_t<is_resource<T>(), bool> = true>
-#  define _VIRTUALIZABLE_CONCEPT_IMPL                                          \
-    template <typename T, std::enable_if_t<is_resource<T>(), bool>>
+DETECT_FUNCTION(preRead, typename T::Desc{}, 0u, (void *)nullptr)
+DETECT_FUNCTION(preWrite, typename T::Desc{}, 0u, (void *)nullptr)
 
-template <typename T> struct has_preRead {
-  template <typename U> static constexpr std::false_type test(...) {
-    return {};
-  }
-  template <typename U>
-  static constexpr auto test(U *u) ->
-    typename std::is_same<void,
-                          decltype(u->preRead(typename T::Desc{}, 0u,
-                                              std::declval<void *>()))>::type {
-    return {};
-  }
-
-  static constexpr bool value{test<T>(nullptr)};
-};
-template <typename T> struct has_preWrite {
-  template <typename U> static constexpr std::false_type test(...) {
-    return {};
-  }
-  template <typename U>
-  static constexpr auto test(U *u) ->
-    typename std::is_same<void,
-                          decltype(u->preWrite(typename T::Desc{}, 0u,
-                                               std::declval<void *>()))>::type {
-    return {};
-  }
-
-  static constexpr bool value{test<T>(nullptr)};
-};
+#  undef DETECT_FUNCTION
 
 template <typename T, typename = void> struct has_toString : std::false_type {};
-template <class T>
+template <typename T>
 struct has_toString<T, std::void_t<decltype(T::toString)>>
     : std::is_convertible<decltype(T::toString(typename T::Desc{})),
                           std::string_view> {};

@@ -4,6 +4,15 @@
 // ResourceEntry class:
 //
 
+inline void ResourceEntry::create(void *allocator) {
+  assert(isTransient());
+  m_concept->create(allocator);
+}
+inline void ResourceEntry::destroy(void *allocator) {
+  assert(isTransient());
+  m_concept->destroy(allocator);
+}
+
 template <typename T> inline T &ResourceEntry::get() {
   return _getModel<T>()->resource;
 }
@@ -12,12 +21,15 @@ inline const typename T::Desc &ResourceEntry::getDescriptor() const {
   return _getModel<T>()->descriptor;
 }
 
+//
+// (private):
+//
+
 template <typename T>
-inline ResourceEntry::ResourceEntry(uint32_t id, typename T::Desc &&desc,
-                                    T &&obj, uint32_t version, bool imported)
-    : m_id{id}, m_concept{std::make_unique<Model<T>>(
-                  std::forward<typename T::Desc>(desc), std::forward<T>(obj))},
-      m_version{version}, m_imported{imported} {}
+inline ResourceEntry::ResourceEntry(const Type type, uint32_t id,
+                                    const typename T::Desc &desc, T &&obj)
+    : m_type{type}, m_id{id}, m_version{kInitialVersion},
+      m_concept{std::make_unique<Model<T>>(desc, std::forward<T>(obj))} {}
 
 template <typename T> inline auto *ResourceEntry::_getModel() const {
   auto *model = dynamic_cast<Model<T> *>(m_concept.get());
@@ -30,8 +42,8 @@ template <typename T> inline auto *ResourceEntry::_getModel() const {
 //
 
 template <typename T>
-inline ResourceEntry::Model<T>::Model(typename T::Desc &&desc, T &&obj)
-    : descriptor{std::move(desc)}, resource{std::move(obj)} {}
+inline ResourceEntry::Model<T>::Model(const typename T::Desc &desc, T &&obj)
+    : descriptor{desc}, resource{std::move(obj)} {}
 
 template <typename T>
 inline void ResourceEntry::Model<T>::create(void *allocator) {

@@ -6,12 +6,11 @@ inline T &FrameGraphBlackboard::add(Args &&...args) {
   return m_storage[typeid(T)].emplace<T>(T{std::forward<Args>(args)...});
 }
 
-template <typename T> [[nodiscard]] const T &FrameGraphBlackboard::get() const {
+template <typename T> const T &FrameGraphBlackboard::get() const {
   assert(has<T>());
   return std::any_cast<const T &>(m_storage.at(typeid(T)));
 }
-template <typename T>
-[[nodiscard]] const T *FrameGraphBlackboard::try_get() const {
+template <typename T> const T *FrameGraphBlackboard::try_get() const {
   auto it = m_storage.find(typeid(T));
   return it != m_storage.cend() ? std::any_cast<const T>(&it->second) : nullptr;
 }

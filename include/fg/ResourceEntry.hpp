@@ -1,14 +1,13 @@
 #pragma once
 
 #include "fg/TypeTraits.hpp"
-#include "fg/PassNode.hpp"
+#include <memory>
 
-// http://www.cplusplus.com/articles/oz18T05o/
-// https://www.modernescpp.com/index.php/c-core-guidelines-type-erasure-with-templates
-
-// Wrapper around a virtual resource
+// Wrapper around a virtual resource.
 class ResourceEntry final {
   friend class FrameGraph;
+
+  enum class Type : uint8_t { Transient, Imported };
 
 public:
   ResourceEntry() = delete;
@@ -16,9 +15,11 @@ public:
   ResourceEntry(ResourceEntry &&) noexcept = default;
 
   ResourceEntry &operator=(const ResourceEntry &) = delete;
-  ResourceEntry &operator=(ResourceEntry &&) noexcept = default;
+  ResourceEntry &operator=(ResourceEntry &&) noexcept = delete;
 
-  [[nodiscard]] std::string toString() const;
+  static constexpr auto kInitialVersion{1u};
+
+  [[nodiscard]] auto toString() const { return m_concept->toString(); }
 
   void create(void *allocator);
   void destroy(void *allocator);
@@ -30,10 +31,10 @@ public:
     m_concept->preWrite(flags, context);
   }
 
-  [[nodiscard]] uint32_t getId() const;
-  [[nodiscard]] uint32_t getVersion() const;
-  [[nodiscard]] bool isImported() const;
-  [[nodiscard]] bool isTransient() const;
+  [[nodiscard]] auto getId() const { return m_id; }
+  [[nodiscard]] auto getVersion() const { return m_version; }
+  [[nodiscard]] auto isImported() const { return m_type == Type::Imported; }
+  [[nodiscard]] auto isTransient() const { return m_type == Type::Transient; }
 
   template <typename T> [[nodiscard]] T &get();
   template <typename T>
@@ -41,8 +42,10 @@ public:
 
 private:
   template <typename T>
-  ResourceEntry(uint32_t id, typename T::Desc &&, T &&, uint32_t version,
-                bool imported = false);
+  ResourceEntry(const Type, uint32_t id, const typename T::Desc &, T &&);
+
+  // http://www.cplusplus.com/articles/oz18T05o/
+  // https://www.modernescpp.com/index.php/c-core-guidelines-type-erasure-with-templates
 
   struct Concept {
     virtual ~Concept() = default;
@@ -55,11 +58,11 @@ private:
 
     virtual std::string toString() const = 0;
   };
-  template <typename T> struct Model : Concept {
-    Model(typename T::Desc &&, T &&);
+  template <typename T> struct Model final : Concept {
+    Model(const typename T::Desc &, T &&);
 
-    void create(void *allocator) final;
-    void destroy(void *allocator) final;
+    void create(void *allocator) override;
+    void destroy(void *allocator) override;
 
     void preRead(uint32_t flags, void *context) override {
 #if __cplusplus >= 202002L
@@ -78,7 +81,7 @@ private:
         resource.preWrite(descriptor, flags, context);
     }
 
-    std::string toString() const final;
+    std::string toString() const override;
 
     const typename T::Desc descriptor;
     T resource;
@@ -87,10 +90,10 @@ private:
   template <typename T> [[nodiscard]] auto *_getModel() const;
 
 private:
+  const Type m_type;
   const uint32_t m_id;
+  uint32_t m_version; // Incremented on each (unique) write declaration.
   std::unique_ptr<Concept> m_concept;
-  uint32_t m_version;    // Incremented on each (unique) write declaration
-  const bool m_imported; // Imported or transient
 
   PassNode *m_producer{nullptr};
   PassNode *m_last{nullptr};

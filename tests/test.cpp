@@ -1,6 +1,6 @@
+#include "catch.hpp"
 #include "fg/FrameGraph.hpp"
 #include "fg/Blackboard.hpp"
-#include "catch.hpp"
 #include <fstream>
 
 struct BadResource {
@@ -13,7 +13,7 @@ static_assert(
 #if __cplusplus >= 202002L
   !Virtualizable<BadResource>
 #else
-  !is_resource<BadResource>()
+  !is_resource<BadResource>
 #endif
 );
 
@@ -24,7 +24,7 @@ struct FrameGraphTexture {
   };
 
   FrameGraphTexture() = default;
-  explicit FrameGraphTexture(int32_t _id) : id{_id} {}
+  explicit FrameGraphTexture(int32_t id_) : id{id_} {}
   FrameGraphTexture(FrameGraphTexture &&) noexcept = default;
 
   void create(const Desc &, void *) {
@@ -33,10 +33,13 @@ struct FrameGraphTexture {
   }
   void destroy(const Desc &, void *) {}
 
-  void preRead(const Desc &, uint32_t flags, void *) {}
-  void preWrite() {}
+  void preRead(const Desc &, uint32_t, void *) const {}
+  void preWrite() const {
+    // Invalid signature, should not be called.
+    CHECK(false);
+  }
 
-  static const char *toString(const Desc &desc) { return "<I>texture</I>"; }
+  static const char *toString(const Desc &) { return "<I>texture</I>"; }
 
   int32_t id{-1};
 };
@@ -46,7 +49,7 @@ static_assert(Virtualizable<FrameGraphTexture>);
 static_assert(has_preRead<FrameGraphTexture>);
 static_assert(!has_preWrite<FrameGraphTexture>);
 #else
-static_assert(is_resource<FrameGraphTexture>());
+static_assert(is_resource<FrameGraphTexture>);
 static_assert(has_preRead<FrameGraphTexture>::value);
 static_assert(!has_preWrite<FrameGraphTexture>::value);
 #endif
@@ -55,11 +58,15 @@ static_assert(!has_preWrite<FrameGraphTexture>::value);
 // Runtime tests:
 //
 
+constexpr auto markAsExecuted = [](const auto &data,
+                                   const FrameGraphPassResources &,
+                                   void *) { data.executed = true; };
+
 TEST_CASE("Pass without data", "[FrameGraph]") {
   FrameGraph fg;
   fg.addCallbackPass(
-    "Dummy", [&](FrameGraph::Builder &builder, auto &) {},
-    [=](const auto &, FrameGraphPassResources &resources, void *) {});
+    "Dummy", [](const FrameGraph::Builder &, auto &) {},
+    [](const auto &, const FrameGraphPassResources &, void *) {});
 }
 TEST_CASE("Basic graph with side-effect", "[FrameGraph]") {
   FrameGraph fg;
@@ -71,7 +78,7 @@ TEST_CASE("Basic graph with side-effect", "[FrameGraph]") {
   };
   auto &testPass = fg.addCallbackPass<TestPass>(
     "Test pass",
-    [&](FrameGraph::Builder &builder, TestPass &data) {
+    [&fg](FrameGraph::Builder &builder, TestPass &data) {
       data.foo = builder.create<FrameGraphTexture>("foo", {128, 128});
       data.foo = builder.write(data.foo);
       REQUIRE(fg.isValid(data.foo));
@@ -82,7 +89,7 @@ TEST_CASE("Basic graph with side-effect", "[FrameGraph]") {
 
       builder.setSideEffect();
     },
-    [=](const TestPass &data, FrameGraphPassResources &resources, void *) {
+    [](const TestPass &data, FrameGraphPassResources &resources, void *) {
       CHECK(resources.get<FrameGraphTexture>(data.foo).id == 1);
       CHECK(resources.get<FrameGraphTexture>(data.bar).id == 2);
 
@@ -96,7 +103,7 @@ TEST_CASE("Basic graph with side-effect", "[FrameGraph]") {
   REQUIRE(testPass.executed);
 }
 TEST_CASE("Imported resource", "[FrameGraph]") {
-  constexpr auto kBackbufferId = 777;
+  static constexpr auto kBackbufferId = 777;
 
   FrameGraph fg;
 
@@ -110,13 +117,13 @@ TEST_CASE("Imported resource", "[FrameGraph]") {
   };
   auto &testPass = fg.addCallbackPass<TestPass>(
     "Test pass",
-    [&](FrameGraph::Builder &builder, TestPass &data) {
+    [&fg, backbuffer](FrameGraph::Builder &builder, TestPass &data) {
       const auto temp = backbuffer;
       data.backbuffer = builder.write(backbuffer);
       REQUIRE(fg.isValid(data.backbuffer));
       REQUIRE_FALSE(fg.isValid(temp));
     },
-    [=](const TestPass &data, FrameGraphPassResources &resources, void *) {
+    [](const TestPass &data, FrameGraphPassResources &resources, void *) {
       CHECK(resources.get<FrameGraphTexture>(data.backbuffer).id ==
             kBackbufferId);
       data.executed = true;
@@ -137,26 +144,23 @@ TEST_CASE("Renamed resource", "[FrameGraph]") {
   };
   auto &pass1 = fg.addCallbackPass<PassData>(
     "Pass1",
-    [&](FrameGraph::Builder &builder, PassData &data) {
+    [](FrameGraph::Builder &builder, PassData &data) {
       data.foo = builder.create<FrameGraphTexture>("foo", {});
       data.foo = builder.write(data.foo);
     },
-    [=](const PassData &data, FrameGraphPassResources &, void *) {
-      data.executed = true;
-    });
+    markAsExecuted);
 
   auto &pass2 = fg.addCallbackPass<PassData>(
     "Pass2",
-    [&](FrameGraph::Builder &builder, PassData &data) {
-      data.foo = builder.write(builder.read(pass1.foo));
+    [&fg, &pass1](FrameGraph::Builder &builder, PassData &data) {
+      constexpr auto kTestFlag = 1;
+      data.foo = builder.write(builder.read(pass1.foo, kTestFlag), kTestFlag);
       REQUIRE_FALSE(fg.isValid(pass1.foo));
       REQUIRE(fg.isValid(data.foo));
 
       builder.setSideEffect();
     },
-    [=](const PassData &data, FrameGraphPassResources &, void *) {
-      data.executed = true;
-    });
+    markAsExecuted);
 
   fg.compile();
   std::ofstream{"renamed_resource.dot"} << fg;
@@ -172,10 +176,8 @@ TEST_CASE("Culled pass", "[FrameGraph]") {
     mutable bool executed{false};
   };
   auto &testPass = fg.addCallbackPass<TestPass>(
-    "Test pass", [&](FrameGraph::Builder &, TestPass &) {},
-    [=](const TestPass &data, FrameGraphPassResources &, void *) {
-      data.executed = true;
-    });
+    "Test pass", [](const FrameGraph::Builder &, const auto &) {},
+    markAsExecuted);
 
   fg.compile();
   std::ofstream{"culled_pass.dot"} << fg;
@@ -196,13 +198,11 @@ TEST_CASE("Deferred pipeline", "[FrameGraph]") {
   };
   auto &depthPass = fg.addCallbackPass<DepthPass>(
     "Depth pass",
-    [&](FrameGraph::Builder &builder, DepthPass &data) {
+    [&desc](FrameGraph::Builder &builder, DepthPass &data) {
       data.depth = builder.create<FrameGraphTexture>("DepthBuffer", desc);
       data.depth = builder.write(data.depth);
     },
-    [=](const DepthPass &data, FrameGraphPassResources &, void *) {
-      data.executed = true;
-    });
+    markAsExecuted);
 
   struct GBufferPass {
     FrameGraphResource depth;
@@ -214,7 +214,7 @@ TEST_CASE("Deferred pipeline", "[FrameGraph]") {
   };
   auto &gbufferPass = fg.addCallbackPass<GBufferPass>(
     "GBuffer pass",
-    [&](FrameGraph::Builder &builder, GBufferPass &data) {
+    [&desc, &depthPass](FrameGraph::Builder &builder, GBufferPass &data) {
       data.depth = builder.read(depthPass.depth);
       data.position =
         builder.create<FrameGraphTexture>("GBuffer/ Position", desc);
@@ -224,9 +224,7 @@ TEST_CASE("Deferred pipeline", "[FrameGraph]") {
       data.albedo = builder.create<FrameGraphTexture>("GBuffer/ Albedo", desc);
       data.albedo = builder.write(data.albedo);
     },
-    [](const GBufferPass &data, FrameGraphPassResources &, void *) {
-      data.executed = true;
-    });
+    markAsExecuted);
 
   struct LightingPass {
     FrameGraphResource position;
@@ -237,24 +235,20 @@ TEST_CASE("Deferred pipeline", "[FrameGraph]") {
   };
   auto &lightingPass = fg.addCallbackPass<LightingPass>(
     "Lighting pass",
-    [&](FrameGraph::Builder &builder, LightingPass &data) {
+    [&gbufferPass, backbufferId](FrameGraph::Builder &builder,
+                                 LightingPass &data) {
       data.position = builder.read(gbufferPass.position);
       data.normal = builder.read(gbufferPass.normal);
       data.albedo = builder.read(gbufferPass.albedo);
       data.output = builder.write(backbufferId);
     },
-    [=](const LightingPass &data, FrameGraphPassResources &, void *) {
-      data.executed = true;
-    });
+    markAsExecuted);
 
   struct Dummy {
     mutable bool executed{false};
   };
   auto &dummyPass = fg.addCallbackPass<Dummy>(
-    "Dummy pass", [&](FrameGraph::Builder &, Dummy &) {},
-    [=](const Dummy &data, FrameGraphPassResources &, void *) {
-      data.executed = true;
-    });
+    "Dummy pass", [](const FrameGraph::Builder &, auto &) {}, markAsExecuted);
 
   fg.compile();
   std::ofstream{"deferred_pipeline.dot"} << fg;
@@ -266,7 +260,7 @@ TEST_CASE("Deferred pipeline", "[FrameGraph]") {
   REQUIRE_FALSE(dummyPass.executed);
 }
 
-TEST_CASE("Blackboard", "[Blackboard]") {
+TEST_CASE("Basic operations", "[Blackboard]") {
   FrameGraphBlackboard bb;
 
   struct FooData {
@@ -294,6 +288,18 @@ TEST_CASE("Blackboard", "[Blackboard]") {
 
   foo->x = 100;
   CHECK(bb.get<FooData>().x == 100);
+}
+TEST_CASE("Copy", "[Blackboard]") {
+  FrameGraphBlackboard bb;
+  struct Data {
+    int32_t value{0};
+  };
+  auto &data = bb.add<Data>(128);
+
+  FrameGraphBlackboard copy{bb};
+  data.value *= 2;
+
+  CHECK(copy.get<Data>().value != data.value);
 }
 
 int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }
