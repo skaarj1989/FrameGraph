@@ -17,6 +17,7 @@ This is a renderer agnostic implementation of **FrameGraph**, inspired by the **
     - [Automatic resource bindings and barriers](#automatic-resource-bindings-and-barriers)
     - [Visualization](#visualization)
       - [Custom writer](#custom-writer)
+      - [Visualization tool](#visualization-tool)
   - [Installation](#installation)
   - [Example](#example)
   - [License](#license)
@@ -272,6 +273,13 @@ struct JsonWriter {
 std::ofstream f{"fg.json"};
 fg.debugOutput(f, JsonWriter{});
 ```
+
+#### Visualization tool
+
+https://skaarj1989.github.io/FrameGraph/
+
+![viewer](media/viewer.png)
+_(see [viewer](https://github.com/skaarj1989/FrameGraph/tree/viewer) branch)_
 
 ## Installation
 
