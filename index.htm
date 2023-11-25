@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FrameGraph Viewer</title>
+  <style>
+    body {
+      font-family: "Helvetica";
+    }
+
+    table {
+      border: 1px solid black;
+      border-collapse: collapse;
+    }
+
+    .hidden {
+      border: 0px !important;
+    }
+
+    .bordered {
+      border: 1px solid black;
+    }
+
+    .rotated {
+      writing-mode: vertical-rl;
+      transform: rotate(180deg);
+      -webkit-writing-mode: vertical-rl;
+      -webkit-transform: rotate(180deg);
+    }
+
+    .out-of-scope {
+      border: 1px dashed lightgray;
+    }
+
+    .marker {
+      border: 2px solid black;
+    }
+
+    .marker:hover:not(.hidden) {
+      background-image: repeating-linear-gradient(-45deg,
+          whitesmoke,
+          whitesmoke 10px,
+          white 10px,
+          white 20px);
+    }
+
+    .executed {
+      background-color: orange;
+    }
+
+    .imported-resource {
+      background-color: steelblue;
+      color: white;
+    }
+
+    .transient-resource {
+      background-color: skyblue;
+    }
+
+    .culled {
+      background-color: silver !important;
+    }
+
+    .read {
+      background-color: yellowgreen !important;
+    }
+
+    .write {
+      background-color: orangered !important;
+    }
+  </style>
+</head>
+
+<body>
+  <script src="https://unpkg.com/vue@latest"></script>
+
+  <div id="app">
+    <table align="center">
+      <thead>
+        <tr>
+          <th scope="row" align="center">
+            <!-- Legend: -->
+            <table>
+              <tbody>
+                <tr v-for="(item, index) in legend" :key="index" class="bordered">
+                  <th scope="row">{{ item.name }}</th>
+                  <td align="center" :class="['bordered', item.class]">{{ item.tag }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </th>
+          <template v-if="fg">
+            <!-- Pass names: -->
+            <th scope="col" v-for="pass in fg.passes" :key="pass.id"
+              :class="['bordered', !pass.culled ? 'executed' : 'culled']">
+              <span class="rotated">{{ pass.name }}</span>
+            </th>
+          </template>
+        </tr>
+        <tr>
+          <th scope="col" class="bordered">
+            <input type="file" accept=".json" @change="loadFile" />
+          </th>
+          <template v-if="fg">
+            <!-- Pass markers: -->
+            <th v-for="pass in fg.passes" :key="pass.id" @mouseover="focusedPass = !pass.culled && pass.id"
+              @mouseleave="focusedPass = null" :class="['marker', getPassMarkerClass(pass)]"></th>
+          </template>
+          </th>
+        </tr>
+      </thead>
+      <tbody v-if="fg">
+        <!-- Resources: -->
+        <tr v-for="resource in fg.resources" :key="resource.id" :set="info = getResourceInfo(resource)">
+          <th scope="row" :title="resource.description"
+            :class="['bordered', resource.culled ? 'culled' : (resource.transient ? 'transient-resource' : 'imported-resource')]">
+            {{ resource.name }}
+          </th>
+          <template v-if="!resource.culled">
+            <!-- Resource markers: -->
+            <td v-if="info.numBefore > 0" :colspan="info.numBefore" class="out-of-scope"></td>
+            <td v-if="info.lifespan > 0" :colspan="info.lifespan"
+              @mouseover="focusedResource = resource.readers && resource.id" @mouseleave="focusedResource = null"
+              :class="['marker', getResourceMarkerClass(resource)]">
+            </td>
+            <td v-if="info.numAfter > 0" :colspan="info.numAfter" class="out-of-scope"></td>
+          </template>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    Vue.createApp({
+      data() {
+        return {
+          legend: [
+            { name: 'executed pass', tag: 'P', class: ['executed', 'pass'] },
+            { name: 'culled pass/resource', tag: 'P/R', class: ['culled'] },
+            { name: 'imported resource', tag: 'R', class: ['imported-resource'] },
+            { name: 'transient resource', tag: 'R', class: ['transient-resource'] },
+            { name: 'read(er)', class: ['read'] },
+            { name: 'write(r)', class: ['write'] },
+          ],
+
+          fg: null,
+          focusedResource: null,
+          focusedPass: null,
+        };
+      },
+      methods: {
+        process: (json) => {
+          if (!Array.isArray(json.passes) || !Array.isArray(json.resources)) {
+            throw new Error("Invalid file");
+          }
+          for (const pass of json.passes) {
+            /*
+            "id": Number,
+            "name": String,
+            "culled": Boolean,
+            "reads": Array,
+            "writes": Array
+            */
+          }
+          for (const resource of json.resources) {
+            /*
+            {
+              "id": Number,
+              "name": String,
+              "description": String,
+              "transient": Boolean,
+              "createdBy" Number (optional, transient only)
+              "readers": Array,
+              "writers": Array,
+            }
+            */
+            const executedOnly = (id) => !json.passes[id].culled;
+            resource.readers = (resource.readers || []).filter(executedOnly);
+            resource.writers = (resource.writers || []).filter(executedOnly);
+
+            resource.culled = resource.transient && json.passes[resource.createdBy].culled;
+          }
+          return json;
+        },
+        loadFile(src) {
+          const reader = new FileReader();
+          reader.addEventListener("load", (event) => {
+            try {
+              this.fg = this.process(JSON.parse(event.target.result));
+            }
+            catch (e) {
+              this.fg = null;
+              console.error(e);
+            }
+          });
+          const files = src.target.files;
+          if (files.length == 1) reader.readAsText(files[0]);
+        },
+
+        getResourceInfo(resource) {
+          const involvedPasses = Array.from(
+            new Set([...(resource.readers || []), ...(resource.writers || [])])
+          ).sort((a, b) => a - b);
+          const first = involvedPasses.at(0);
+          const last = involvedPasses.at(-1);
+
+          const lifespan = last - first + 1;
+          const numAfter = this.fg.passes.length - last - 1;
+          return { numBefore: first, lifespan, numAfter };
+        },
+
+        getPassMarkerClass(pass) {
+          if (pass.culled) { return 'hidden'; };
+
+          return this.focusedResource != null && {
+            read: pass.reads && pass.reads.includes(this.focusedResource),
+            write: pass.writes && pass.writes.includes(this.focusedResource),
+          };
+        },
+        getResourceMarkerClass(resource) {
+          return this.focusedPass != null && {
+            read: resource.readers && resource.readers.includes(this.focusedPass),
+            write: resource.writers && resource.writers.includes(this.focusedPass),
+          };
+        },
+      },
+    }).mount("#app");
+  </script>
+</body>
+
+</html>
