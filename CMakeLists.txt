@@ -44,6 +44,7 @@ add_library(FrameGraph
   "include/fg/Blackboard.inl"
   "include/fg/GraphvizWriter.hpp"
   "include/fg/Fwd.hpp"
+  "include/fg/TypeId.hpp"
   "src/FrameGraph.cpp"
   "src/PassNode.cpp"
   "src/GraphvizWriter.cpp"

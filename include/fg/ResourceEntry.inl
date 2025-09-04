@@ -32,9 +32,11 @@ inline ResourceEntry::ResourceEntry(const Type type, uint32_t id,
       m_concept{std::make_unique<Model<T>>(desc, std::forward<T>(obj))} {}
 
 template <typename T> inline auto *ResourceEntry::_getModel() const {
-  auto *model = dynamic_cast<Model<T> *>(m_concept.get());
-  assert(model && "Invalid type");
-  return model;
+  using ModelType = Model<T>;
+
+  assert(GetTypeId<ModelType>() == m_concept->getTypeId() && "Invalid type");
+
+  return static_cast<ModelType*>(m_concept.get());
 }
 
 //
@@ -65,3 +67,9 @@ inline std::string ResourceEntry::Model<T>::toString() const {
   else
     return "";
 }
+
+template <typename T>
+TypeId ResourceEntry::Model<T>::getTypeId() const {
+  return GetTypeId<Model>();
+}
+

@@ -3,6 +3,8 @@
 #include "fg/TypeTraits.hpp"
 #include <memory>
 
+#include "TypeId.hpp"
+
 // Wrapper around a virtual resource.
 class ResourceEntry final {
   friend class FrameGraph;
@@ -57,6 +59,8 @@ private:
     virtual void preWrite(uint32_t flags, void *) = 0;
 
     virtual std::string toString() const = 0;
+
+    virtual TypeId getTypeId() const = 0;
   };
   template <typename T> struct Model final : Concept {
     Model(const typename T::Desc &, T &&);
@@ -82,6 +86,8 @@ private:
     }
 
     std::string toString() const override;
+
+    TypeId getTypeId() const override;
 
     const typename T::Desc descriptor;
     T resource;

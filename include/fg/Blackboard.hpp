@@ -1,8 +1,8 @@
 #pragma once
-
-#include <typeindex>
 #include <any>
 #include <unordered_map>
+
+#include "fg/TypeId.hpp"
 
 class FrameGraphBlackboard {
 public:
@@ -25,18 +25,7 @@ public:
   template <typename T> [[nodiscard]] bool has() const;
 
 private:
-  static uint32_t GetNextTypeId() {
-    static uint32_t nextTypeId;
-
-    return nextTypeId++;
-  }
-  template<typename T>
-  static uint32_t GetTypeId() {
-    static uint32_t typeId = GetNextTypeId();
-
-    return typeId;
-  }
-  std::unordered_map<uint32_t, std::any> m_storage;
+  std::unordered_map<TypeId, std::any> m_storage;
 };
 
 #include "fg/Blackboard.inl"
