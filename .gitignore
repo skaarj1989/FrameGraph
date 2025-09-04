@@ -31,5 +31,9 @@
 *.out
 *.app
 
-#
+# Cmake user presets
+CMakeUserPresets.json
+
+# Build folders
 /build/*
+build.bak

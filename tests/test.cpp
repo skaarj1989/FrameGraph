@@ -1,4 +1,4 @@
-#include "catch.hpp"
+#include <catch2/catch_test_macros.hpp>
 #include "fg/FrameGraph.hpp"
 #include "fg/Blackboard.hpp"
 #include <fstream>
@@ -28,7 +28,6 @@ struct FrameGraphTexture {
   FrameGraphTexture(FrameGraphTexture &&) noexcept = default;
 
   void create(const Desc &, void *) {
-    static auto lastId = 0;
     id = ++lastId;
   }
   void destroy(const Desc &, void *) {}
@@ -40,8 +39,12 @@ struct FrameGraphTexture {
   }
 
   static const char *toString(const Desc &) { return "<I>texture</I>"; }
+  static void resetIds() { lastId = 0; }
 
   int32_t id{-1};
+
+private:
+  static inline int32_t lastId = 0;
 };
 
 #if __cplusplus >= 202002L
@@ -76,6 +79,7 @@ TEST_CASE("Basic graph with side-effect", "[FrameGraph]") {
     FrameGraphResource bar;
     mutable bool executed{false};
   };
+  FrameGraphTexture::resetIds();
   auto &testPass = fg.addCallbackPass<TestPass>(
     "Test pass",
     [&fg](FrameGraph::Builder &builder, TestPass &data) {
@@ -301,5 +305,3 @@ TEST_CASE("Copy", "[Blackboard]") {
 
   CHECK(copy.get<Data>().value != data.value);
 }
-
-int main(int argc, char *argv[]) { return Catch::Session().run(argc, argv); }
