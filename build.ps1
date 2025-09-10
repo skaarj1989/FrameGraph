@@ -13,8 +13,8 @@
 # compiler.runtime=dynamic
 # compiler.version=193
 # os=Windows
-# (compiler.version) and compiler.cppstd might change in the future, but that is OK)
-# This pforiel is actually the release profile, so just rename the file to vs-2022-release
+# (compiler.version and compiler.cppstd might change in the future, but that is OK)
+# This pforile is actually the release profile, so just rename the file to vs-2022-release
 # Make a copy of it and call it vs-2022-debug
 # In the debug profile change the 'build_type' from 'Release' to 'Debug'
 # You are done, you can invoke this script :)
