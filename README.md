@@ -18,7 +18,10 @@ This is a renderer agnostic implementation of **FrameGraph**, inspired by the **
     - [Visualization](#visualization)
       - [Custom writer](#custom-writer)
       - [Visualization tool](#visualization-tool)
-  - [Installation](#installation)
+    - [Snippets (Visual Studio)](#snippets-visual-studio)
+      - [Installation](#installation)
+      - [Usage](#usage)
+  - [Installation](#installation-1)
   - [Example](#example)
   - [License](#license)
 
@@ -280,6 +283,18 @@ https://skaarj1989.github.io/FrameGraph/
 
 ![viewer](media/viewer.png)
 _(see [viewer](https://github.com/skaarj1989/FrameGraph/tree/viewer) branch)_
+
+### Snippets (Visual Studio)
+
+#### Installation
+
+> Tools -> Code Snippets Manager... -> Add... -> (select `snippets` directory)
+
+#### Usage
+
+Open snippets menu with: **Ctrl+K,Ctrl+X**
+
+![snippet](media/snippet.gif)
 
 ## Installation
 

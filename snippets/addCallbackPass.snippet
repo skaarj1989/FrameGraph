@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+  <CodeSnippet Format="1.0.0">
+    <Header>
+      <Title>FrameGraph Pass</Title>
+      <Author>skaarj1989</Author>
+      <Shortcut>fgpass</Shortcut>
+      <Description>Boilerplate for a FrameGraph addCallbackPass</Description>
+      <SnippetTypes>
+        <SnippetType>Expansion</SnippetType>
+      </SnippetTypes>
+    </Header>
+    <Snippet>
+      <Code Language="CPP">
+<![CDATA[
+fg.addCallbackPass(
+    "$PassName$", [](const FrameGraph::Builder &builder, $UserDataT$ &userData) {
+        // Setup
+    },
+    []($UserDataT$ &userData, const FrameGraphPassResources &resources, void *context) {
+        // Exec
+    }
+);$end$
+]]>
+      </Code>
+      <Declarations>
+        <Literal>
+          <ID>PassName</ID>
+          <ToolTip>Name of the pass (string literal)</ToolTip>
+          <Default>PassName</Default>
+        </Literal>
+        <Literal>
+          <ID>UserDataT</ID>
+          <ToolTip>User data struct type</ToolTip>
+          <Default>UserData</Default>
+        </Literal>
+      </Declarations>
+    </Snippet>
+  </CodeSnippet>
+</CodeSnippets>
