@@ -1,4 +1,4 @@
-#include "catch.hpp"
+#include <catch.hpp>
 #include "fg/FrameGraph.hpp"
 #include "fg/Blackboard.hpp"
 #include <fstream>
@@ -27,10 +27,7 @@ struct FrameGraphTexture {
   explicit FrameGraphTexture(int32_t id_) : id{id_} {}
   FrameGraphTexture(FrameGraphTexture &&) noexcept = default;
 
-  void create(const Desc &, void *) {
-    static auto lastId = 0;
-    id = ++lastId;
-  }
+  void create(const Desc &, void *) { id = ++m_lastId; }
   void destroy(const Desc &, void *) {}
 
   void preRead(const Desc &, uint32_t, void *) const {}
@@ -42,6 +39,16 @@ struct FrameGraphTexture {
   static const char *toString(const Desc &) { return "<I>texture</I>"; }
 
   int32_t id{-1};
+
+private:
+  friend class Fixture;
+
+  inline static int32_t m_lastId{0};
+};
+
+class Fixture {
+public:
+  ~Fixture() { FrameGraphTexture::m_lastId = 0; }
 };
 
 #if __cplusplus >= 202002L
@@ -62,13 +69,14 @@ constexpr auto markAsExecuted = [](const auto &data,
                                    const FrameGraphPassResources &,
                                    void *) { data.executed = true; };
 
-TEST_CASE("Pass without data", "[FrameGraph]") {
+TEST_CASE_METHOD(Fixture, "Pass without data", "[FrameGraph]") {
   FrameGraph fg;
   fg.addCallbackPass(
     "Dummy", [](const FrameGraph::Builder &, auto &) {},
     [](const auto &, const FrameGraphPassResources &, void *) {});
 }
-TEST_CASE("Basic graph with side-effect", "[FrameGraph]") {
+
+TEST_CASE_METHOD(Fixture, "Basic graph with side-effect", "[FrameGraph]") {
   FrameGraph fg;
 
   struct TestPass {
@@ -102,7 +110,7 @@ TEST_CASE("Basic graph with side-effect", "[FrameGraph]") {
   fg.execute();
   REQUIRE(testPass.executed);
 }
-TEST_CASE("Imported resource", "[FrameGraph]") {
+TEST_CASE_METHOD(Fixture, "Imported resource", "[FrameGraph]") {
   static constexpr auto kBackbufferId = 777;
 
   FrameGraph fg;
@@ -135,7 +143,7 @@ TEST_CASE("Imported resource", "[FrameGraph]") {
   fg.execute();
   REQUIRE(testPass.executed);
 }
-TEST_CASE("Renamed resource", "[FrameGraph]") {
+TEST_CASE_METHOD(Fixture, "Renamed resource", "[FrameGraph]") {
   FrameGraph fg;
 
   struct PassData {
@@ -169,7 +177,7 @@ TEST_CASE("Renamed resource", "[FrameGraph]") {
   REQUIRE(pass1.executed);
   REQUIRE(pass2.executed);
 }
-TEST_CASE("Culled pass", "[FrameGraph]") {
+TEST_CASE_METHOD(Fixture, "Culled pass", "[FrameGraph]") {
   FrameGraph fg;
 
   struct TestPass {
@@ -185,7 +193,7 @@ TEST_CASE("Culled pass", "[FrameGraph]") {
   fg.execute();
   REQUIRE_FALSE(testPass.executed);
 }
-TEST_CASE("Deferred pipeline", "[FrameGraph]") {
+TEST_CASE_METHOD(Fixture, "Deferred pipeline", "[FrameGraph]") {
   FrameGraph fg;
   auto backbufferId =
     fg.import("Backbuffer", {1280, 720}, FrameGraphTexture{117});
@@ -260,7 +268,7 @@ TEST_CASE("Deferred pipeline", "[FrameGraph]") {
   REQUIRE_FALSE(dummyPass.executed);
 }
 
-TEST_CASE("Basic operations", "[Blackboard]") {
+TEST_CASE_METHOD(Fixture, "Basic operations", "[Blackboard]") {
   FrameGraphBlackboard bb;
 
   struct FooData {
@@ -289,7 +297,7 @@ TEST_CASE("Basic operations", "[Blackboard]") {
   foo->x = 100;
   CHECK(bb.get<FooData>().x == 100);
 }
-TEST_CASE("Copy", "[Blackboard]") {
+TEST_CASE_METHOD(Fixture, "Copy", "[Blackboard]") {
   FrameGraphBlackboard bb;
   struct Data {
     int32_t value{0};
